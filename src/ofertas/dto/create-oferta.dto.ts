@@ -1,0 +1,38 @@
+import {
+  IsInt,
+  IsPositive,
+  IsString,
+  IsNotEmpty,
+  IsOptional,
+  MaxLength,
+  IsDateString,
+  IsNumber,
+  Min,
+  Max,
+} from 'class-validator';
+
+export class CreateOfertaDto {
+  @IsInt()
+  @IsPositive()
+  paqueteId!: number;
+
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(200)
+  titulo!: string;
+
+  @IsOptional()
+  @IsString()
+  descripcion?: string;
+
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(0.01)
+  @Max(100)
+  descuento!: number;
+
+  @IsDateString()
+  fechaInicio!: string;
+
+  @IsDateString()
+  fechaFin!: string;
+}
