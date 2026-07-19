@@ -10,9 +10,9 @@ import { Repository } from 'typeorm';
 import { Reserva, EstadoReserva } from './entities/reserva.entity';
 import { Paquete } from '../paquetes/entities/paquete.entity';
 import { Oferta } from '../ofertas/entities/oferta.entity';
-import { Cliente } from '../clientes/entities/cliente.entity';
 import { CreateReservaDto } from './dto/create-reserva.dto';
 import { UpdateReservaDto } from './dto/update-reserva.dto';
+import { AdminUpdateReservaDto } from './dto/admin-update-reserva.dto';
 import { EmailService } from '../email/email.service';
 
 @Injectable()
@@ -50,10 +50,7 @@ export class ReservasService {
       const raw = await manager
         .getRepository(Reserva)
         .createQueryBuilder('reserva')
-        .select(
-          'COALESCE(SUM(reserva.cantidadPersonas), 0)',
-          'ocupados',
-        )
+        .select('COALESCE(SUM(reserva.cantidadPersonas), 0)', 'ocupados')
         .where('reserva.paqueteId = :id', { id: dto.paqueteId })
         .andWhere('reserva.estado != :cancelada', {
           cancelada: EstadoReserva.CANCELADA,
@@ -86,7 +83,7 @@ export class ReservasService {
         montoTotal: Number(montoTotal.toFixed(2)),
         estado: EstadoReserva.PENDIENTE,
         paquete: { id: dto.paqueteId } as Paquete,
-        cliente: clienteId ? ({ id: clienteId } as Cliente) : undefined,
+        cliente: clienteId ? { id: clienteId } : undefined,
       });
 
       const guardada = await manager.getRepository(Reserva).save(reserva);
@@ -128,10 +125,10 @@ export class ReservasService {
     return oferta?.descuento ?? 0;
   }
 
-  /** Panel admin: todas las reservas. */
+  /** Panel admin: todas las reservas, con el paquete y la cuenta de cliente (si la reserva no fue de invitado). */
   async findAll(): Promise<Reserva[]> {
     return this.reservaRepository.find({
-      relations: { paquete: true },
+      relations: { paquete: { destino: true }, cliente: true },
       order: { fechaReserva: 'DESC' },
     });
   }
@@ -148,7 +145,7 @@ export class ReservasService {
   async findOne(id: number): Promise<Reserva> {
     const reserva = await this.reservaRepository.findOne({
       where: { id },
-      relations: { paquete: true },
+      relations: { paquete: { destino: true }, cliente: true },
     });
 
     if (!reserva) {
@@ -170,5 +167,25 @@ export class ReservasService {
 
     reserva.estado = dto.estado;
     return this.reservaRepository.save(reserva);
+  }
+
+  /**
+   * Edición completa desde el panel admin: datos de contacto, cantidad
+   * de personas, monto y/o estado. Pensado para corregir errores de
+   * tipeo o ajustar montos manualmente (ej. tras negociar con el
+   * cliente), no para re-calcular disponibilidad de cupos.
+   */
+  async update(id: number, dto: AdminUpdateReservaDto): Promise<Reserva> {
+    const reserva = await this.findOne(id);
+
+    Object.assign(reserva, dto);
+
+    return this.reservaRepository.save(reserva);
+  }
+
+  /** Elimina definitivamente una reserva. Solo administradores. */
+  async remove(id: number): Promise<void> {
+    const reserva = await this.findOne(id);
+    await this.reservaRepository.remove(reserva);
   }
 }

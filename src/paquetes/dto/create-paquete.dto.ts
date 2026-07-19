@@ -7,6 +7,10 @@ import {
   IsDateString,
   IsNumber,
   Min,
+  IsOptional,
+  IsUrl,
+  IsArray,
+  ArrayMaxSize,
 } from 'class-validator';
 
 export class CreatePaqueteDto {
@@ -36,4 +40,18 @@ export class CreatePaqueteDto {
 
   @IsDateString()
   fechaFin!: string;
+
+  // Imágenes iniciales de la galería (opcional). Si se envían y no se
+  // indica imagenPrincipal, la primera de la lista queda como principal.
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(20)
+  @IsUrl({}, { each: true })
+  imagenes?: string[];
+
+  // Debe ser una de las urls incluidas en `imagenes` (o, si no se manda
+  // `imagenes`, se guarda igual como imagen_principal del paquete).
+  @IsOptional()
+  @IsUrl()
+  imagenPrincipal?: string;
 }

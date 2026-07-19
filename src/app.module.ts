@@ -29,6 +29,7 @@ import { ContenidoModule } from './contenido/contenido.module';
 
 import { ReservasModule } from './reservas/reservas.module';
 import { CotizacionesModule } from './cotizaciones/cotizaciones.module';
+import { FinanzasModule } from './finanzas/finanzas.module';
 
 import { MensajesModule } from './mensajes/mensajes.module';
 import { EmailModule } from './email/email.module';
@@ -142,6 +143,7 @@ import { AsistenteIaModule } from './asistente-ia/asistente-ia.module';
      */
     ReservasModule,
     CotizacionesModule,
+    FinanzasModule,
 
     /**
      * Comunicación

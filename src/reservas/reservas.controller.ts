@@ -4,14 +4,17 @@ import {
   Post,
   Body,
   Patch,
+  Delete,
   Param,
   UseGuards,
+  HttpCode,
 } from '@nestjs/common';
 import { ApiBearerAuth } from '@nestjs/swagger';
 
 import { ReservasService } from './reservas.service';
 import { CreateReservaDto } from './dto/create-reserva.dto';
 import { UpdateReservaDto } from './dto/update-reserva.dto';
+import { AdminUpdateReservaDto } from './dto/admin-update-reserva.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
@@ -60,5 +63,23 @@ export class ReservasController {
   @Roles(Role.SUPER_ADMIN, Role.ADMIN)
   updateEstado(@Param('id') id: string, @Body() dto: UpdateReservaDto) {
     return this.reservasService.updateEstado(+id, dto);
+  }
+
+  // Edición completa (datos de contacto, personas, monto, estado).
+  @Patch(':id')
+  @ApiBearerAuth('JWT-auth')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.SUPER_ADMIN, Role.ADMIN)
+  update(@Param('id') id: string, @Body() dto: AdminUpdateReservaDto) {
+    return this.reservasService.update(+id, dto);
+  }
+
+  @Delete(':id')
+  @HttpCode(204)
+  @ApiBearerAuth('JWT-auth')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.SUPER_ADMIN, Role.ADMIN)
+  remove(@Param('id') id: string) {
+    return this.reservasService.remove(+id);
   }
 }

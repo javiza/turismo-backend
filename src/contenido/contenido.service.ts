@@ -30,7 +30,10 @@ export class ContenidoService {
 
     const nuevo = this.contenidoRepository.create({
       id: SINGLETON_ID,
+      nombreAgencia: 'Tu Agencia de Viajes',
       titulo: 'Programa tus vacaciones con nosotros',
+      subtitulo:
+        'Arma tu próximo viaje con destinos, paquetes y ofertas curadas por nuestro equipo — todo reservable en minutos.',
       presentacion: '',
       mision: '',
       vision: '',

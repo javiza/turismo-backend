@@ -16,7 +16,7 @@ el `access_token` que te devuelve el login.
 ### POST /auth/login
 ```json
 {
-  "email": "admin@turismo.com",
+  "email": "admin@turismo.cl",
   "password": "12345678"
 }
 ```

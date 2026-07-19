@@ -194,4 +194,32 @@ export class EmailService {
        <p>${params.mensaje || '(sin mensaje)'}</p>`,
     );
   }
+
+  /** Aviso al cliente cuando el admin responde su consulta/cotización desde el panel. */
+  async notificarRespuestaCotizacion(params: {
+    email: string;
+    nombre: string;
+    respuesta: string;
+    nombrePaquete?: string;
+    nombreDestino?: string;
+  }): Promise<void> {
+    if (!params.email) return;
+
+    const sobreQue = params.nombrePaquete
+      ? ` sobre <strong>${params.nombrePaquete}</strong>`
+      : params.nombreDestino
+        ? ` sobre <strong>${params.nombreDestino}</strong>`
+        : '';
+
+    await this.send(
+      params.email,
+      'Respondimos tu consulta',
+      `<h2>Hola ${params.nombre},</h2>
+       <p>Tenemos una respuesta para tu consulta${sobreQue}:</p>
+       <blockquote style="border-left:3px solid #e07444;margin:0;padding:8px 16px;color:#333;">
+         ${params.respuesta}
+       </blockquote>
+       <p>Puedes ver el detalle e historial completo iniciando sesión en tu cuenta.</p>`,
+    );
+  }
 }

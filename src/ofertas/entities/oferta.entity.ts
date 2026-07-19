@@ -5,10 +5,12 @@ import {
   ManyToOne,
   JoinColumn,
   CreateDateColumn,
+  OneToMany,
 } from 'typeorm';
 
 import { Paquete } from '../../paquetes/entities/paquete.entity';
 import { numericTransformer } from '../../common/transformers/numeric.transformer';
+import { OfertaImagen } from './oferta-imagen.entity';
 
 @Entity('ofertas')
 export class Oferta {
@@ -47,6 +49,14 @@ export class Oferta {
 
   @Column({ default: true })
   activa!: boolean;
+
+  // Denormalizado a propósito, igual que en Paquete/Destino: guarda la
+  // url de la imagen marcada "es_principal" en oferta_imagenes.
+  @Column({ name: 'imagen_principal', type: 'text', nullable: true })
+  imagenPrincipal?: string;
+
+  @OneToMany(() => OfertaImagen, (imagen) => imagen.oferta)
+  imagenes?: OfertaImagen[];
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt!: Date;

@@ -27,6 +27,14 @@ export class DestinoImagen {
   @Column('text')
   url!: string;
 
+  // Marca cuál imagen de la galería es la "de perfil" (la que se usa como
+  // imagen_principal en las cards/listados). Solo una fila por destino
+  // debería tener es_principal = true; lo garantiza el servicio, no una
+  // constraint de DB (se resuelve con un UPDATE previo, ver
+  // DestinosService.marcarPrincipal).
+  @Column({ name: 'es_principal', default: false })
+  esPrincipal!: boolean;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt!: Date;
 }

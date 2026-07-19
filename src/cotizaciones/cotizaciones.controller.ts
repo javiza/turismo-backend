@@ -13,6 +13,7 @@ import { ApiBearerAuth } from '@nestjs/swagger';
 import { CotizacionesService } from './cotizaciones.service';
 import { CreateCotizacionDto } from './dto/create-cotizacion.dto';
 import { UpdateCotizacionDto } from './dto/update-cotizacion.dto';
+import { AdminCotizacionDto } from './dto/admin-cotizacion.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
@@ -60,6 +61,15 @@ export class CotizacionesController {
   @Roles(Role.SUPER_ADMIN, Role.ADMIN)
   updateEstado(@Param('id') id: string, @Body() dto: UpdateCotizacionDto) {
     return this.cotizacionesService.updateEstado(+id, dto);
+  }
+
+  // Responder la consulta y/o marcarla como leída.
+  @Patch(':id/admin')
+  @ApiBearerAuth('JWT-auth')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.SUPER_ADMIN, Role.ADMIN)
+  updateAdmin(@Param('id') id: string, @Body() dto: AdminCotizacionDto) {
+    return this.cotizacionesService.updateAdmin(+id, dto);
   }
 
   @Delete(':id')

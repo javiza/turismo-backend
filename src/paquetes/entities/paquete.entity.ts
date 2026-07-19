@@ -6,10 +6,12 @@ import {
   JoinColumn,
   CreateDateColumn,
   UpdateDateColumn,
+  OneToMany,
 } from 'typeorm';
 
 import { Destino } from '../../destinos/entities/destino.entity';
 import { numericTransformer } from '../../common/transformers/numeric.transformer';
+import { PaqueteImagen } from './paquete-imagen.entity';
 
 @Entity('paquetes')
 export class Paquete {
@@ -44,6 +46,19 @@ export class Paquete {
   })
   precio!: number;
 
+  // Se completa solo desde PaquetesService.update() cuando el admin baja
+  // el precio: guarda el valor anterior para poder mostrarlo tachado en
+  // la vitrina pública (como una rebaja comercial). Null = no hay rebaja
+  // vigente que mostrar. El admin puede limpiarlo a mano.
+  @Column('numeric', {
+    name: 'precio_anterior',
+    precision: 12,
+    scale: 2,
+    nullable: true,
+    transformer: numericTransformer,
+  })
+  precioAnterior?: number;
+
   @Column('int')
   cupos!: number;
 
@@ -55,6 +70,17 @@ export class Paquete {
 
   @Column({ default: true })
   activo!: boolean;
+
+  // Denormalizado a propósito: guarda la url de la imagen marcada como
+  // "es_principal" en la galería (paquete_imagenes), para poder mostrarla
+  // en cards/listados sin tener que traer siempre la relación completa.
+  // La mantiene sincronizada PaquetesService (agregarImagen/marcarPrincipal/
+  // eliminarImagen).
+  @Column({ name: 'imagen_principal', type: 'text', nullable: true })
+  imagenPrincipal?: string;
+
+  @OneToMany(() => PaqueteImagen, (imagen) => imagen.paquete)
+  imagenes?: PaqueteImagen[];
 
   // search_vector: se calcula automáticamente por el trigger
   // paquete_search_trigger (ver sql/002-paquete-search-trigger.sql).

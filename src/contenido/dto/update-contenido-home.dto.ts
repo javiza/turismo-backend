@@ -30,8 +30,18 @@ class ResenaHomeDto {
 export class UpdateContenidoHomeDto {
   @IsOptional()
   @IsString()
+  @MaxLength(150)
+  nombreAgencia?: string;
+
+  @IsOptional()
+  @IsString()
   @MaxLength(300)
   titulo?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  subtitulo?: string;
 
   @IsOptional()
   @IsString()

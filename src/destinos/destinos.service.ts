@@ -25,8 +25,28 @@ export class DestinosService {
   ) {}
 
   async create(dto: CreateDestinoDto): Promise<Destino> {
-    const destino = this.destinoRepository.create(dto);
-    return this.destinoRepository.save(destino);
+    const { imagenes, imagenPrincipal, ...resto } = dto;
+
+    const destino = this.destinoRepository.create({
+      ...resto,
+      imagenPrincipal: imagenPrincipal ?? imagenes?.[0],
+    });
+    const guardado = await this.destinoRepository.save(destino);
+
+    if (imagenes && imagenes.length > 0) {
+      const principal = imagenPrincipal ?? imagenes[0];
+      await this.destinoImagenRepository.save(
+        imagenes.map((url) =>
+          this.destinoImagenRepository.create({
+            destino: { id: guardado.id } as Destino,
+            url,
+            esPrincipal: url === principal,
+          }),
+        ),
+      );
+    }
+
+    return this.findOne(guardado.id);
   }
 
   /**
@@ -117,14 +137,25 @@ export class DestinosService {
   // --- Galería de imágenes ---
 
   async agregarImagen(destinoId: number, url: string): Promise<DestinoImagen> {
-    await this.findOne(destinoId);
+    const destino = await this.findOne(destinoId);
+
+    // Si es la primera imagen que se agrega, queda como principal
+    // automáticamente (no tiene sentido una galería sin foto de perfil).
+    const esPrimera = !destino.imagenes || destino.imagenes.length === 0;
 
     const imagen = this.destinoImagenRepository.create({
       destino: { id: destinoId } as Destino,
       url,
+      esPrincipal: esPrimera,
     });
 
-    return this.destinoImagenRepository.save(imagen);
+    const guardada = await this.destinoImagenRepository.save(imagen);
+
+    if (esPrimera) {
+      await this.destinoRepository.update(destinoId, { imagenPrincipal: url });
+    }
+
+    return guardada;
   }
 
   async eliminarImagen(destinoId: number, imagenId: number): Promise<void> {
@@ -138,7 +169,53 @@ export class DestinosService {
       );
     }
 
+    const eraPrincipal = imagen.esPrincipal;
     await this.destinoImagenRepository.remove(imagen);
+
+    if (eraPrincipal) {
+      // Se fue la foto de perfil: promovemos otra imagen restante (si
+      // queda alguna) para que la galería nunca quede sin principal.
+      const siguiente = await this.destinoImagenRepository.findOne({
+        where: { destinoId },
+        order: { createdAt: 'ASC' },
+      });
+
+      if (siguiente) {
+        siguiente.esPrincipal = true;
+        await this.destinoImagenRepository.save(siguiente);
+      }
+
+      await this.destinoRepository.update(destinoId, {
+        imagenPrincipal: siguiente?.url,
+      });
+    }
+  }
+
+  /** Marca una imagen de la galería como la "de perfil" del destino. */
+  async marcarPrincipal(
+    destinoId: number,
+    imagenId: number,
+  ): Promise<DestinoImagen> {
+    const imagen = await this.destinoImagenRepository.findOne({
+      where: { id: imagenId, destinoId },
+    });
+
+    if (!imagen) {
+      throw new NotFoundException('Imagen no encontrada para este destino');
+    }
+
+    await this.destinoImagenRepository.update(
+      { destinoId },
+      { esPrincipal: false },
+    );
+    imagen.esPrincipal = true;
+    await this.destinoImagenRepository.save(imagen);
+
+    await this.destinoRepository.update(destinoId, {
+      imagenPrincipal: imagen.url,
+    });
+
+    return imagen;
   }
 
   // --- Categorías ---

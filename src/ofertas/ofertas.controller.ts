@@ -13,6 +13,7 @@ import { ApiBearerAuth } from '@nestjs/swagger';
 import { OfertasService } from './ofertas.service';
 import { CreateOfertaDto } from './dto/create-oferta.dto';
 import { UpdateOfertaDto } from './dto/update-oferta.dto';
+import { AgregarImagenDto } from '../common/dto/agregar-imagen.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
@@ -64,5 +65,37 @@ export class OfertasController {
   @Roles(Role.SUPER_ADMIN, Role.ADMIN)
   remove(@Param('id') id: string) {
     return this.ofertasService.remove(+id);
+  }
+
+  // --- Galería de imágenes (admin) ---
+
+  @Post(':id/imagenes')
+  @ApiBearerAuth('JWT-auth')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.SUPER_ADMIN, Role.ADMIN)
+  agregarImagen(@Param('id') id: string, @Body() dto: AgregarImagenDto) {
+    return this.ofertasService.agregarImagen(+id, dto.url);
+  }
+
+  @Delete(':id/imagenes/:imagenId')
+  @ApiBearerAuth('JWT-auth')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.SUPER_ADMIN, Role.ADMIN)
+  eliminarImagen(
+    @Param('id') id: string,
+    @Param('imagenId') imagenId: string,
+  ) {
+    return this.ofertasService.eliminarImagen(+id, +imagenId);
+  }
+
+  @Patch(':id/imagenes/:imagenId/principal')
+  @ApiBearerAuth('JWT-auth')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.SUPER_ADMIN, Role.ADMIN)
+  marcarImagenPrincipal(
+    @Param('id') id: string,
+    @Param('imagenId') imagenId: string,
+  ) {
+    return this.ofertasService.marcarPrincipal(+id, +imagenId);
   }
 }

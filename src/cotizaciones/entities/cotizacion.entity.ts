@@ -78,6 +78,15 @@ export class Cotizacion {
   })
   estado!: EstadoCotizacion;
 
+  @Column('text', { nullable: true })
+  respuesta?: string;
+
+  @Column({ name: 'respondido_en', type: 'timestamp', nullable: true })
+  respondidoEn?: Date;
+
+  @Column({ default: false })
+  leida!: boolean;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt!: Date;
 }

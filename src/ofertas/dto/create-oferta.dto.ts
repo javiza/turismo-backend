@@ -9,6 +9,9 @@ import {
   IsNumber,
   Min,
   Max,
+  IsUrl,
+  IsArray,
+  ArrayMaxSize,
 } from 'class-validator';
 
 export class CreateOfertaDto {
@@ -35,4 +38,16 @@ export class CreateOfertaDto {
 
   @IsDateString()
   fechaFin!: string;
+
+  // Imágenes iniciales de la galería (opcional). Si se envían y no se
+  // indica imagenPrincipal, la primera de la lista queda como principal.
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(20)
+  @IsUrl({}, { each: true })
+  imagenes?: string[];
+
+  @IsOptional()
+  @IsUrl()
+  imagenPrincipal?: string;
 }

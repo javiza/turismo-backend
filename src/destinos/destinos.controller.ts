@@ -14,7 +14,7 @@ import { ApiBearerAuth } from '@nestjs/swagger';
 import { DestinosService } from './destinos.service';
 import { CreateDestinoDto } from './dto/create-destino.dto';
 import { UpdateDestinoDto } from './dto/update-destino.dto';
-import { AgregarImagenDto } from './dto/agregar-imagen.dto';
+import { AgregarImagenDto } from '../common/dto/agregar-imagen.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
@@ -100,6 +100,17 @@ export class DestinosController {
     @Param('imagenId') imagenId: string,
   ) {
     return this.destinosService.eliminarImagen(+id, +imagenId);
+  }
+
+  @Patch(':id/imagenes/:imagenId/principal')
+  @ApiBearerAuth('JWT-auth')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.SUPER_ADMIN, Role.ADMIN)
+  marcarImagenPrincipal(
+    @Param('id') id: string,
+    @Param('imagenId') imagenId: string,
+  ) {
+    return this.destinosService.marcarPrincipal(+id, +imagenId);
   }
 
   // --- Categorías (admin) ---

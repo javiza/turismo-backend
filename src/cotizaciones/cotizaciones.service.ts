@@ -2,12 +2,13 @@ import { Injectable, NotFoundException, BadRequestException } from '@nestjs/comm
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, QueryFailedError } from 'typeorm';
 
-import { Cotizacion } from './entities/cotizacion.entity';
+import { Cotizacion, EstadoCotizacion } from './entities/cotizacion.entity';
 import { Paquete } from '../paquetes/entities/paquete.entity';
 import { Cliente } from '../clientes/entities/cliente.entity';
 import { Destino } from '../destinos/entities/destino.entity';
 import { CreateCotizacionDto } from './dto/create-cotizacion.dto';
 import { UpdateCotizacionDto } from './dto/update-cotizacion.dto';
+import { AdminCotizacionDto } from './dto/admin-cotizacion.dto';
 import { EmailService } from '../email/email.service';
 
 @Injectable()
@@ -115,6 +116,44 @@ export class CotizacionesService {
     const cotizacion = await this.findOne(id);
     cotizacion.estado = dto.estado;
     return this.cotizacionRepository.save(cotizacion);
+  }
+
+  /**
+   * Panel admin: responder la consulta y/o marcarla como leída. Escribir
+   * una respuesta marca automáticamente leida=true, estado=RESPONDIDA y
+   * dispara el correo al cliente con el contenido de la respuesta.
+   */
+  async updateAdmin(id: number, dto: AdminCotizacionDto): Promise<Cotizacion> {
+    const cotizacion = await this.findOne(id);
+
+    if (dto.leida !== undefined) {
+      cotizacion.leida = dto.leida;
+    }
+
+    if (dto.estado !== undefined) {
+      cotizacion.estado = dto.estado;
+    }
+
+    if (dto.respuesta !== undefined) {
+      cotizacion.respuesta = dto.respuesta;
+      cotizacion.respondidoEn = new Date();
+      cotizacion.estado = EstadoCotizacion.RESPONDIDA;
+      cotizacion.leida = true;
+    }
+
+    const guardada = await this.cotizacionRepository.save(cotizacion);
+
+    if (dto.respuesta !== undefined) {
+      void this.emailService.notificarRespuestaCotizacion({
+        email: guardada.email,
+        nombre: guardada.nombre,
+        respuesta: dto.respuesta,
+        nombrePaquete: guardada.paquete?.nombre,
+        nombreDestino: guardada.destino?.nombre,
+      });
+    }
+
+    return guardada;
   }
 
   async remove(id: number): Promise<void> {

@@ -7,6 +7,8 @@ import {
   Min,
   Max,
   IsUrl,
+  IsArray,
+  ArrayMaxSize,
 } from 'class-validator';
 
 export class CreateDestinoDto {
@@ -44,4 +46,12 @@ export class CreateDestinoDto {
   @IsOptional()
   @IsUrl()
   imagenPrincipal?: string;
+
+  // Imágenes iniciales de la galería (opcional). Si se envían y no se
+  // indica imagenPrincipal, la primera de la lista queda como principal.
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(20)
+  @IsUrl({}, { each: true })
+  imagenes?: string[];
 }
