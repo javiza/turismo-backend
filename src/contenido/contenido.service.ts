@@ -46,6 +46,10 @@ export class ContenidoService {
       telefono: null,
       correo: null,
       direccion: null,
+      heroImagenUrl: null,
+      heroImagenPosX: 50,
+      heroImagenPosY: 50,
+      heroImagenZoom: 100,
     });
 
     return this.contenidoRepository.save(nuevo);

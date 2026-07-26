@@ -90,6 +90,27 @@ export class ContenidoHome {
   @Column('text', { nullable: true })
   direccion!: string | null;
 
+  // Imagen de fondo del hero (home pública) y del banner de la sesión
+  // de cliente. Nullable: mientras no se cargue una, el frontend cae de
+  // vuelta a la imagen por defecto del proyecto. Se sube por las mismas
+  // dos vías que el logo (Cloudinary o URL externa pegada a mano).
+  @Column('text', { name: 'hero_imagen_url', nullable: true })
+  heroImagenUrl!: string | null;
+
+  // Posición del encuadre en % (0-100), igual a CSS object-position.
+  // 50/50 = centrado (comportamiento por defecto de object-cover).
+  @Column('float', { name: 'hero_imagen_pos_x', default: 50 })
+  heroImagenPosX!: number;
+
+  @Column('float', { name: 'hero_imagen_pos_y', default: 50 })
+  heroImagenPosY!: number;
+
+  // Zoom en % (100 = tamaño normal, >100 acerca/recorta una sección de
+  // la imagen). Se aplica como transform: scale() sobre la imagen ya
+  // posicionada con object-position.
+  @Column('float', { name: 'hero_imagen_zoom', default: 100 })
+  heroImagenZoom!: number;
+
   @UpdateDateColumn({ name: 'updated_at' })
   updatedAt!: Date;
 }

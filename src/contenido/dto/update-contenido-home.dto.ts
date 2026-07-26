@@ -133,4 +133,32 @@ export class UpdateContenidoHomeDto {
   @IsString()
   @MaxLength(300)
   direccion?: string;
+
+  // Imagen de fondo del hero: URL (Cloudinary o externa pegada a mano).
+  // "" se usa para quitarla y volver a la imagen por defecto del sitio.
+  @IsOptional()
+  @IsString()
+  @MaxLength(1000)
+  heroImagenUrl?: string;
+
+  // Posición del encuadre en % (0-100), igual a CSS object-position.
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(100)
+  heroImagenPosX?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(100)
+  heroImagenPosY?: number;
+
+  // Zoom en % — 100 a 300 (100 = tamaño normal, hasta 3x para recortar
+  // una sección pequeña de la imagen).
+  @IsOptional()
+  @IsNumber()
+  @Min(100)
+  @Max(300)
+  heroImagenZoom?: number;
 }
