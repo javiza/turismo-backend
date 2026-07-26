@@ -18,6 +18,11 @@ import { PaqueteImagen } from '../paquetes/entities/paquete-imagen.entity';
 import { DestinoImagen } from '../destinos/entities/destino-imagen.entity';
 import { CreateOfertaDto } from './dto/create-oferta.dto';
 import { UpdateOfertaDto } from './dto/update-oferta.dto';
+import { CacheService } from '../redis/cache.service';
+
+const CACHE_PREFIX = 'ofertas:';
+// TTL corto: la vigencia de una oferta depende de la fecha de hoy.
+const CACHE_TTL_SEGUNDOS = 120;
 
 @Injectable()
 export class OfertasService {
@@ -32,7 +37,12 @@ export class OfertasService {
     private readonly destinoImagenRepository: Repository<DestinoImagen>,
     @InjectRepository(OfertaImagen)
     private readonly ofertaImagenRepository: Repository<OfertaImagen>,
+    private readonly cache: CacheService,
   ) {}
+
+  private invalidarCache(): Promise<void> {
+    return this.cache.delByPrefix(CACHE_PREFIX);
+  }
 
   private validarFechas(fechaInicio: string, fechaFin: string) {
     if (new Date(fechaFin) <= new Date(fechaInicio)) {
@@ -83,6 +93,7 @@ export class OfertasService {
       await this.heredarImagenes(guardada.id, dto.paqueteId);
     }
 
+    await this.invalidarCache();
     return this.findOne(guardada.id);
   }
 
@@ -141,15 +152,20 @@ export class OfertasService {
   async findAll(): Promise<Oferta[]> {
     const hoy = new Date().toISOString().slice(0, 10);
 
-    return this.ofertaRepository.find({
-      where: {
-        activa: true,
-        fechaInicio: LessThanOrEqual(hoy),
-        fechaFin: MoreThanOrEqual(hoy),
-      },
-      relations: { paquete: true, imagenes: true },
-      order: { fechaInicio: 'ASC' },
-    });
+    return this.cache.wrap(
+      `${CACHE_PREFIX}list:public:${hoy}`,
+      CACHE_TTL_SEGUNDOS,
+      () =>
+        this.ofertaRepository.find({
+          where: {
+            activa: true,
+            fechaInicio: LessThanOrEqual(hoy),
+            fechaFin: MoreThanOrEqual(hoy),
+          },
+          relations: { paquete: true, imagenes: true },
+          order: { fechaInicio: 'ASC' },
+        }),
+    );
   }
 
   /** Panel admin: todas las ofertas, vigentes o no. */
@@ -161,10 +177,15 @@ export class OfertasService {
   }
 
   async findOne(id: number): Promise<Oferta> {
-    const oferta = await this.ofertaRepository.findOne({
-      where: { id },
-      relations: { paquete: true, imagenes: true },
-    });
+    const oferta = await this.cache.wrap(
+      `${CACHE_PREFIX}detail:${id}`,
+      CACHE_TTL_SEGUNDOS,
+      () =>
+        this.ofertaRepository.findOne({
+          where: { id },
+          relations: { paquete: true, imagenes: true },
+        }),
+    );
 
     if (!oferta) {
       throw new NotFoundException('Oferta no encontrada');
@@ -188,7 +209,9 @@ export class OfertasService {
     }
 
     try {
-      return await this.ofertaRepository.save(oferta);
+      const guardada = await this.ofertaRepository.save(oferta);
+      await this.invalidarCache();
+      return guardada;
     } catch (error) {
       if (this.isForeignKeyViolation(error)) {
         throw new BadRequestException('El paquete indicado no existe');
@@ -200,6 +223,7 @@ export class OfertasService {
   async remove(id: number): Promise<void> {
     const oferta = await this.findOne(id);
     await this.ofertaRepository.remove(oferta);
+    await this.invalidarCache();
   }
 
   private isForeignKeyViolation(error: unknown): boolean {

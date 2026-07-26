@@ -31,4 +31,22 @@ export class AuditoriaService {
       take: 200,
     });
   }
+
+  /**
+   * Borra registros de auditoría más viejos que `diasRetencion` días.
+   * Se llama desde una tarea en segundo plano (ver src/queue/tasks.processor.ts),
+   * nunca desde un endpoint HTTP: es una operación de mantenimiento, no de negocio.
+   */
+  async limpiarAntiguos(diasRetencion: number): Promise<number> {
+    const limite = new Date();
+    limite.setDate(limite.getDate() - diasRetencion);
+
+    const resultado = await this.auditoriaRepository
+      .createQueryBuilder()
+      .delete()
+      .where('created_at < :limite', { limite })
+      .execute();
+
+    return resultado.affected ?? 0;
+  }
 }

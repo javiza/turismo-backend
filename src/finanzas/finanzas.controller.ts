@@ -2,16 +2,20 @@ import {
   Controller,
   Get,
   Post,
+  Patch,
   Delete,
   Body,
   Param,
   ParseIntPipe,
   UseGuards,
+  Query,
 } from '@nestjs/common';
 import { ApiBearerAuth } from '@nestjs/swagger';
 
 import { FinanzasService } from './finanzas.service';
 import { CreateMovimientoFinancieroDto } from './dto/create-movimiento-financiero.dto';
+import { UpdateConfiguracionFinancieraDto } from './dto/update-configuracion-financiera.dto';
+import { TipoMovimientoFinanciero } from './entities/movimiento-financiero.entity';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
@@ -29,6 +33,19 @@ export class FinanzasController {
   @Get('resumen')
   resumen() {
     return this.finanzasService.resumen();
+  }
+
+  // --- Configuración financiera (% de impuesto, editable porque la
+  // normativa chilena lo sube de tanto en tanto) ---
+
+  @Get('configuracion')
+  obtenerConfiguracion() {
+    return this.finanzasService.obtenerConfiguracion();
+  }
+
+  @Patch('configuracion')
+  actualizarConfiguracion(@Body() dto: UpdateConfiguracionFinancieraDto) {
+    return this.finanzasService.actualizarConfiguracion(dto);
   }
 
   @Get('ingresos-mensuales')
@@ -52,8 +69,13 @@ export class FinanzasController {
   // cifras que vienen de reservas).
 
   @Get('movimientos')
-  listarMovimientos() {
-    return this.finanzasService.listarMovimientos();
+  listarMovimientos(@Query('tipo') tipo?: TipoMovimientoFinanciero) {
+    return this.finanzasService.listarMovimientos(tipo);
+  }
+
+  @Get('gastos-por-categoria')
+  gastosPorCategoria() {
+    return this.finanzasService.gastosPorCategoria();
   }
 
   @Post('movimientos')

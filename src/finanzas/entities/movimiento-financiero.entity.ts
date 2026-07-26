@@ -33,6 +33,22 @@ export enum TipoMovimientoFinanciero {
   AJUSTE = 'AJUSTE',
 }
 
+/**
+ * Categoría del gasto. Solo tiene sentido cuando tipo = EGRESO_MANUAL
+ * (ver validación en el DTO); para el resto de los tipos queda null.
+ * Sirve para poder desglosar "en qué se fue la plata" en el resumen
+ * financiero, en vez de tener un solo monto agregado de egresos.
+ */
+export enum CategoriaGasto {
+  OPERACIONAL = 'OPERACIONAL',
+  SUELDOS = 'SUELDOS',
+  MARKETING = 'MARKETING',
+  PROVEEDORES = 'PROVEEDORES',
+  MANTENIMIENTO = 'MANTENIMIENTO',
+  IMPUESTOS = 'IMPUESTOS',
+  OTRO = 'OTRO',
+}
+
 @Entity('movimientos_financieros')
 export class MovimientoFinanciero {
   @PrimaryGeneratedColumn()
@@ -50,6 +66,9 @@ export class MovimientoFinanciero {
 
   @Column('text')
   descripcion!: string;
+
+  @Column({ type: 'varchar', length: 30, nullable: true })
+  categoria?: CategoriaGasto | null;
 
   @Column({ name: 'usuario_id', nullable: true })
   usuarioId?: number;

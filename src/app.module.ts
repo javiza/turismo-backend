@@ -6,6 +6,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
 import { ScheduleModule } from '@nestjs/schedule';
+import { EventEmitterModule } from '@nestjs/event-emitter';
 import * as Joi from 'joi';
 import {
   ThrottlerModule,
@@ -14,6 +15,14 @@ import {
 
 // Configuración
 import { getDatabaseConfig } from './config/database.config';
+
+// Infraestructura
+import { LoggingModule } from './logging/logging.module';
+import { RedisModule } from './redis/redis.module';
+import { StorageModule } from './storage/storage.module';
+import { QueueModule } from './queue/queue.module';
+import { HealthModule } from './health/health.module';
+import { MetricsModule } from './metrics/metrics.module';
 
 // Módulos
 import { UsersModule } from './users/users.module';
@@ -33,6 +42,8 @@ import { FinanzasModule } from './finanzas/finanzas.module';
 
 import { MensajesModule } from './mensajes/mensajes.module';
 import { EmailModule } from './email/email.module';
+import { WhatsappModule } from './whatsapp/whatsapp.module';
+import { ProveedoresModule } from './proveedores/proveedores.module';
 
 import { AnalyticsModule } from './analytics/analytics.module';
 import { AuditoriaModule } from './auditoria/auditoria.module';
@@ -88,9 +99,31 @@ import { AsistenteIaModule } from './asistente-ia/asistente-ia.module';
 
     ADMIN_NOTIFICATION_EMAIL: Joi.string().email().required(),
 
+    WHATSAPP_TOKEN: Joi.string().allow('').optional(),
+    WHATSAPP_PHONE_NUMBER_ID: Joi.string().allow('').optional(),
+    WHATSAPP_ADMIN_NUMBER: Joi.string().allow('').optional(),
+    WHATSAPP_API_VERSION: Joi.string().allow('').optional(),
+
     SEED_ADMIN_EMAIL: Joi.string().email().required(),
     SEED_ADMIN_PASSWORD: Joi.string().required(),
     SEED_ADMIN_NOMBRE: Joi.string().required(),
+
+    // Redis (caché + BullMQ). REDIS_URL tiene prioridad si está presente
+    // (formato típico de Railway/Render: redis://user:pass@host:puerto).
+    REDIS_URL: Joi.string().uri().optional(),
+    REDIS_HOST: Joi.string().optional(),
+    REDIS_PORT: Joi.number().optional(),
+    REDIS_PASSWORD: Joi.string().allow('').optional(),
+
+    // Cloudinary (subida de imágenes)
+    CLOUDINARY_CLOUD_NAME: Joi.string().allow('').optional(),
+    CLOUDINARY_API_KEY: Joi.string().allow('').optional(),
+    CLOUDINARY_API_SECRET: Joi.string().allow('').optional(),
+
+    // Logging estructurado
+    LOG_LEVEL: Joi.string()
+      .valid('fatal', 'error', 'warn', 'info', 'debug', 'trace')
+      .optional(),
   }),
 }),
 
@@ -98,6 +131,38 @@ import { AsistenteIaModule } from './asistente-ia/asistente-ia.module';
      * Cron Jobs
      */
     ScheduleModule.forRoot(),
+
+    /**
+     * Eventos de dominio internos (desacopla notificaciones de la lógica
+     * de negocio; ver src/common/events/*).
+     */
+    EventEmitterModule.forRoot(),
+
+    /**
+     * Logging estructurado (Pino)
+     */
+    LoggingModule,
+
+    /**
+     * Redis: caché de aplicación (Global, ver RedisModule)
+     */
+    RedisModule,
+
+    /**
+     * Colas en segundo plano (BullMQ), sobre la misma conexión Redis
+     */
+    QueueModule,
+
+    /**
+     * Almacenamiento de imágenes (Cloudinary)
+     */
+    StorageModule,
+
+    /**
+     * Salud y métricas
+     */
+    HealthModule,
+    MetricsModule,
 
     /**
      * Protección contra ataques de fuerza bruta
@@ -150,6 +215,12 @@ import { AsistenteIaModule } from './asistente-ia/asistente-ia.module';
      */
     MensajesModule,
     EmailModule,
+    WhatsappModule,
+
+    /**
+     * Proveedores
+     */
+    ProveedoresModule,
 
     /**
      * Inteligencia Artificial

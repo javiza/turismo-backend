@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, QueryFailedError } from 'typeorm';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 
 import { Cotizacion, EstadoCotizacion } from './entities/cotizacion.entity';
 import { Paquete } from '../paquetes/entities/paquete.entity';
@@ -9,7 +10,12 @@ import { Destino } from '../destinos/entities/destino.entity';
 import { CreateCotizacionDto } from './dto/create-cotizacion.dto';
 import { UpdateCotizacionDto } from './dto/update-cotizacion.dto';
 import { AdminCotizacionDto } from './dto/admin-cotizacion.dto';
-import { EmailService } from '../email/email.service';
+import {
+  COTIZACION_CREADA_EVENT,
+  COTIZACION_RESPONDIDA_EVENT,
+  CotizacionCreadaEvent,
+  CotizacionRespondidaEvent,
+} from '../common/events/cotizacion.events';
 
 @Injectable()
 export class CotizacionesService {
@@ -20,7 +26,7 @@ export class CotizacionesService {
     private readonly paqueteRepository: Repository<Paquete>,
     @InjectRepository(Destino)
     private readonly destinoRepository: Repository<Destino>,
-    private readonly emailService: EmailService,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   /** Público: botón "Consultar" sobre un paquete, un destino, o cotización general. */
@@ -59,25 +65,19 @@ export class CotizacionesService {
       ? (await this.destinoRepository.findOne({ where: { id: dto.destinoId } }))?.nombre
       : undefined;
 
-    void this.emailService.enviarConfirmacionCotizacion({
-      email: guardada.email,
-      nombre: guardada.nombre,
-      nombrePaquete,
-      nombreDestino,
-    });
-
-    // Este es el correo que realmente le llega al equipo (Gmail de la
-    // agencia, ADMIN_NOTIFICATION_EMAIL) con la pregunta del visitante/
-    // cliente, para que puedan responder.
-    void this.emailService.notificarNuevaCotizacion({
-      nombre: guardada.nombre,
-      email: guardada.email,
-      telefono: guardada.telefono,
-      nombrePaquete,
-      nombreDestino,
-      cantidadPersonas: guardada.cantidadPersonas,
-      mensaje: guardada.mensaje,
-    });
+    this.eventEmitter.emit(
+      COTIZACION_CREADA_EVENT,
+      new CotizacionCreadaEvent(
+        guardada.id,
+        guardada.nombre,
+        guardada.email,
+        guardada.telefono,
+        guardada.cantidadPersonas,
+        guardada.mensaje,
+        nombrePaquete,
+        nombreDestino,
+      ),
+    );
 
     return guardada;
   }
@@ -88,6 +88,18 @@ export class CotizacionesService {
       relations: { paquete: true, destino: true },
       order: { createdAt: 'DESC' },
     });
+  }
+
+  /**
+   * Conteo liviano de consultas no leídas, para el "ticket" de
+   * notificación visible en el panel admin (badge en el menú, sin tener
+   * que traer la lista completa solo para contar).
+   */
+  async contarNoLeidas(): Promise<{ count: number }> {
+    const count = await this.cotizacionRepository.count({
+      where: { leida: false },
+    });
+    return { count };
   }
 
   /** Historial del cliente autenticado (dashboard cliente). */
@@ -144,13 +156,17 @@ export class CotizacionesService {
     const guardada = await this.cotizacionRepository.save(cotizacion);
 
     if (dto.respuesta !== undefined) {
-      void this.emailService.notificarRespuestaCotizacion({
-        email: guardada.email,
-        nombre: guardada.nombre,
-        respuesta: dto.respuesta,
-        nombrePaquete: guardada.paquete?.nombre,
-        nombreDestino: guardada.destino?.nombre,
-      });
+      this.eventEmitter.emit(
+        COTIZACION_RESPONDIDA_EVENT,
+        new CotizacionRespondidaEvent(
+          guardada.id,
+          guardada.email,
+          guardada.nombre,
+          dto.respuesta,
+          guardada.paquete?.nombre,
+          guardada.destino?.nombre,
+        ),
+      );
     }
 
     return guardada;

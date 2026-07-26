@@ -98,6 +98,11 @@ export class ClientesAuthService {
     return this.reservasService.findByCliente(clienteId);
   }
 
+  /** Cancela una reserva propia del cliente autenticado (ver ReservasService.cancelarPropia). */
+  async cancelarReserva(reservaId: number, clienteId: number) {
+    return this.reservasService.cancelarPropia(reservaId, clienteId);
+  }
+
   async misCotizaciones(clienteId: number) {
     return this.cotizacionesService.findByCliente(clienteId);
   }

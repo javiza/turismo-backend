@@ -13,6 +13,10 @@ import { Destino } from '../destinos/entities/destino.entity';
 import { DestinoImagen } from '../destinos/entities/destino-imagen.entity';
 import { CreatePaqueteDto } from './dto/create-paquete.dto';
 import { UpdatePaqueteDto } from './dto/update-paquete.dto';
+import { CacheService } from '../redis/cache.service';
+
+const CACHE_PREFIX = 'paquetes:';
+const CACHE_TTL_SEGUNDOS = 300;
 
 @Injectable()
 export class PaquetesService {
@@ -23,7 +27,18 @@ export class PaquetesService {
     private readonly paqueteImagenRepository: Repository<PaqueteImagen>,
     @InjectRepository(DestinoImagen)
     private readonly destinoImagenRepository: Repository<DestinoImagen>,
+    private readonly cache: CacheService,
   ) {}
+
+  /**
+   * Invalida el caché de listados/búsqueda/detalle de paquetes. Se llama
+   * en create/update/remove; las operaciones de galería de imágenes no
+   * invalidan (quedan hasta ${CACHE_TTL_SEGUNDOS}s desactualizadas como
+   * trade-off aceptado — ver docs/ARQUITECTURA.md).
+   */
+  private invalidarCache(): Promise<void> {
+    return this.cache.delByPrefix(CACHE_PREFIX);
+  }
 
   private validarFechas(fechaInicio: string, fechaFin: string) {
     if (new Date(fechaFin) <= new Date(fechaInicio)) {
@@ -74,6 +89,7 @@ export class PaquetesService {
       await this.heredarImagenesDeDestino(guardado.id, dto.destinoId);
     }
 
+    await this.invalidarCache();
     return this.findOne(guardado.id);
   }
 
@@ -118,11 +134,13 @@ export class PaquetesService {
    * solo paquetes activos.
    */
   async findAll(): Promise<Paquete[]> {
-    return this.paqueteRepository.find({
-      where: { activo: true },
-      relations: { destino: true, imagenes: true },
-      order: { fechaInicio: 'ASC' },
-    });
+    return this.cache.wrap(`${CACHE_PREFIX}list:public`, CACHE_TTL_SEGUNDOS, () =>
+      this.paqueteRepository.find({
+        where: { activo: true },
+        relations: { destino: true, imagenes: true },
+        order: { fechaInicio: 'ASC' },
+      }),
+    );
   }
 
   /** Listado para el panel admin: incluye paquetes desactivados. */
@@ -144,26 +162,34 @@ export class PaquetesService {
       return this.findAll();
     }
 
-    return this.paqueteRepository
-      .createQueryBuilder('paquete')
-      .leftJoinAndSelect('paquete.destino', 'destino')
-      .where('paquete.activo = true')
-      .andWhere(
-        `paquete.search_vector @@ plainto_tsquery('spanish', unaccent(:q))`,
-        { q },
-      )
-      .orderBy(
-        `ts_rank(paquete.search_vector, plainto_tsquery('spanish', unaccent(:q)))`,
-        'DESC',
-      )
-      .getMany();
+    const clave = `${CACHE_PREFIX}search:${q.trim().toLowerCase()}`;
+    return this.cache.wrap(clave, CACHE_TTL_SEGUNDOS, () =>
+      this.paqueteRepository
+        .createQueryBuilder('paquete')
+        .leftJoinAndSelect('paquete.destino', 'destino')
+        .where('paquete.activo = true')
+        .andWhere(
+          `paquete.search_vector @@ plainto_tsquery('spanish', unaccent(:q))`,
+          { q },
+        )
+        .orderBy(
+          `ts_rank(paquete.search_vector, plainto_tsquery('spanish', unaccent(:q)))`,
+          'DESC',
+        )
+        .getMany(),
+    );
   }
 
   async findOne(id: number): Promise<Paquete> {
-    const paquete = await this.paqueteRepository.findOne({
-      where: { id },
-      relations: { destino: true, imagenes: true },
-    });
+    const paquete = await this.cache.wrap(
+      `${CACHE_PREFIX}detail:${id}`,
+      CACHE_TTL_SEGUNDOS,
+      () =>
+        this.paqueteRepository.findOne({
+          where: { id },
+          relations: { destino: true, imagenes: true },
+        }),
+    );
 
     if (!paquete) {
       throw new NotFoundException('Paquete no encontrado');
@@ -225,6 +251,7 @@ export class PaquetesService {
       guardado.precioAnterior = undefined;
     }
 
+    await this.invalidarCache();
     return guardado;
   }
 
@@ -241,6 +268,8 @@ export class PaquetesService {
       }
       throw error;
     }
+
+    await this.invalidarCache();
   }
 
   private isForeignKeyViolation(error: unknown): boolean {

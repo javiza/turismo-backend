@@ -4,9 +4,14 @@ import {
   IsPositive,
   IsString,
   IsNotEmpty,
+  IsOptional,
   MaxLength,
+  ValidateIf,
 } from 'class-validator';
-import { TipoMovimientoFinanciero } from '../entities/movimiento-financiero.entity';
+import {
+  TipoMovimientoFinanciero,
+  CategoriaGasto,
+} from '../entities/movimiento-financiero.entity';
 
 export class CreateMovimientoFinancieroDto {
   @IsEnum(TipoMovimientoFinanciero)
@@ -23,4 +28,15 @@ export class CreateMovimientoFinancieroDto {
   @IsNotEmpty()
   @MaxLength(500)
   descripcion!: string;
+
+  // Solo tiene sentido cuando el movimiento es un gasto (EGRESO_MANUAL).
+  // Para el resto de los tipos se ignora aunque venga en el body (ver
+  // FinanzasService.registrarMovimiento).
+  @ValidateIf(
+    (dto: CreateMovimientoFinancieroDto) =>
+      dto.tipo === TipoMovimientoFinanciero.EGRESO_MANUAL,
+  )
+  @IsEnum(CategoriaGasto)
+  @IsOptional()
+  categoria?: CategoriaGasto;
 }

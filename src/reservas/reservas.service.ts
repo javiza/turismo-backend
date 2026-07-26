@@ -3,9 +3,11 @@ import {
   NotFoundException,
   ConflictException,
   BadRequestException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 
 import { Reserva, EstadoReserva } from './entities/reserva.entity';
 import { Paquete } from '../paquetes/entities/paquete.entity';
@@ -13,14 +15,17 @@ import { Oferta } from '../ofertas/entities/oferta.entity';
 import { CreateReservaDto } from './dto/create-reserva.dto';
 import { UpdateReservaDto } from './dto/update-reserva.dto';
 import { AdminUpdateReservaDto } from './dto/admin-update-reserva.dto';
-import { EmailService } from '../email/email.service';
+import {
+  RESERVA_CREADA_EVENT,
+  ReservaCreadaEvent,
+} from '../common/events/reserva-creada.event';
 
 @Injectable()
 export class ReservasService {
   constructor(
     @InjectRepository(Reserva)
     private readonly reservaRepository: Repository<Reserva>,
-    private readonly emailService: EmailService,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   /**
@@ -88,20 +93,23 @@ export class ReservasService {
 
       const guardada = await manager.getRepository(Reserva).save(reserva);
 
-      // El correo se dispara fuera de la transacción (fire-and-forget):
-      // si el envío falla o demora, la reserva ya quedó confirmada en
-      // base de datos y no debe revertirse por eso.
-      if (dto.emailCliente) {
-        void this.emailService.enviarConfirmacionReserva({
-          email: dto.emailCliente,
-          nombreCliente: dto.nombreCliente,
-          nombrePaquete: paquete.nombre,
-          cantidadPersonas: dto.cantidadPersonas,
-          montoTotal: guardada.montoTotal,
-          fechaInicio: paquete.fechaInicio,
-          fechaFin: paquete.fechaFin,
-        });
-      }
+      // El evento se emite fuera de la transacción (fire-and-forget):
+      // si el listener (envío de correo) falla o demora, la reserva ya
+      // quedó confirmada en base de datos y no debe revertirse por eso.
+      // Ver reservas/listeners/reserva-notificaciones.listener.ts.
+      this.eventEmitter.emit(
+        RESERVA_CREADA_EVENT,
+        new ReservaCreadaEvent(
+          guardada.id,
+          dto.emailCliente,
+          dto.nombreCliente,
+          paquete.nombre,
+          dto.cantidadPersonas,
+          guardada.montoTotal,
+          paquete.fechaInicio,
+          paquete.fechaFin,
+        ),
+      );
 
       return guardada;
     });
@@ -187,5 +195,28 @@ export class ReservasService {
   async remove(id: number): Promise<void> {
     const reserva = await this.findOne(id);
     await this.reservaRepository.remove(reserva);
+  }
+
+  /**
+   * Cancelación desde el dashboard del propio cliente (no admin). Verifica
+   * que la reserva le pertenezca antes de tocarla — a diferencia de
+   * updateEstado() (uso admin), acá el "id" viene de un usuario común, así
+   * que nunca hay que confiar en que la reserva sea suya sin comprobarlo.
+   * Cancela (no elimina) para conservar el historial y liberar cupos, ya
+   * que create() calcula disponibilidad excluyendo estado CANCELADA.
+   */
+  async cancelarPropia(id: number, clienteId: number): Promise<Reserva> {
+    const reserva = await this.findOne(id);
+
+    if (reserva.clienteId !== clienteId) {
+      throw new ForbiddenException('Esta reserva no pertenece a tu cuenta');
+    }
+
+    if (reserva.estado === EstadoReserva.CANCELADA) {
+      throw new BadRequestException('La reserva ya está cancelada');
+    }
+
+    reserva.estado = EstadoReserva.CANCELADA;
+    return this.reservaRepository.save(reserva);
   }
 }

@@ -47,6 +47,16 @@ export class CotizacionesController {
     return this.cotizacionesService.findAll();
   }
 
+  // Debe ir antes de ':id' para que Nest no interprete "no-leidas" como
+  // un id.
+  @Get('no-leidas/count')
+  @ApiBearerAuth('JWT-auth')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.SUPER_ADMIN, Role.ADMIN)
+  contarNoLeidas() {
+    return this.cotizacionesService.contarNoLeidas();
+  }
+
   @Get(':id')
   @ApiBearerAuth('JWT-auth')
   @UseGuards(JwtAuthGuard, RolesGuard)

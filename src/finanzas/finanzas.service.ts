@@ -6,9 +6,15 @@ import { Reserva, EstadoReserva } from '../reservas/entities/reserva.entity';
 import {
   MovimientoFinanciero,
   TipoMovimientoFinanciero,
+  CategoriaGasto,
 } from './entities/movimiento-financiero.entity';
+import { ConfiguracionFinanciera } from './entities/configuracion-financiera.entity';
 import { CreateMovimientoFinancieroDto } from './dto/create-movimiento-financiero.dto';
+import { UpdateConfiguracionFinancieraDto } from './dto/update-configuracion-financiera.dto';
 import { Role } from '../common/constants/roles.enum';
+
+const CONFIGURACION_SINGLETON_ID = 1;
+const PORCENTAJE_IMPUESTO_DEFAULT = 19; // IVA general vigente en Chile
 
 const TIPOS_PERDIDA = [
   TipoMovimientoFinanciero.ROBO,
@@ -31,7 +37,16 @@ export interface ResumenFinanciero {
   ingresosManuales: number;
   egresosManuales: number;
   perdidasManuales: number; // robo + estafa + pérdida, sumados
-  balanceTotal: number;
+  // --- Resumen fiscal (sección Finanzas del panel admin) ---
+  // gananciasTotales reemplaza al viejo "balanceTotal": mismo cálculo
+  // (ingresos reales + manuales - egresos - pérdidas), pero con el
+  // nombre que de verdad se muestra en el panel, para no tener dos
+  // cifras iguales bajo etiquetas distintas.
+  gananciasTotales: number;
+  gastosTotales: number; // egresosManuales + perdidasManuales
+  porcentajeImpuesto: number;
+  impuestos: number; // gananciasTotales * porcentajeImpuesto/100 (0 si no hay ganancia)
+  gananciaNeta: number; // gananciasTotales - impuestos
 }
 
 export interface IngresoMensual {
@@ -48,6 +63,11 @@ export interface IngresoPorItem {
   reservas: number;
 }
 
+export interface GastoPorCategoria {
+  categoria: CategoriaGasto | 'SIN_CATEGORIA';
+  total: number;
+}
+
 @Injectable()
 export class FinanzasService {
   constructor(
@@ -55,6 +75,8 @@ export class FinanzasService {
     private readonly reservaRepository: Repository<Reserva>,
     @InjectRepository(MovimientoFinanciero)
     private readonly movimientoRepository: Repository<MovimientoFinanciero>,
+    @InjectRepository(ConfiguracionFinanciera)
+    private readonly configuracionRepository: Repository<ConfiguracionFinanciera>,
   ) {}
 
   /**
@@ -100,6 +122,32 @@ export class FinanzasService {
     const { ingresosManuales, egresosManuales, perdidasManuales } =
       await this.totalesMovimientosManuales();
 
+    // Ganancia = todo lo que entró (ventas reales + manual) menos todo lo
+    // que salió (gastos + pérdidas). Gastos totales, aparte, para la
+    // tarjeta propia que pide el panel — sin mezclarlo con "pérdidas"
+    // (robo/estafa) que es un concepto distinto aunque ambos resten.
+    const gananciasTotales = Number(
+      (
+        ingresosConfirmados +
+        ingresosManuales -
+        egresosManuales -
+        perdidasManuales
+      ).toFixed(2),
+    );
+    const gastosTotales = Number(
+      (egresosManuales + perdidasManuales).toFixed(2),
+    );
+
+    const { porcentajeImpuesto } = await this.obtenerConfiguracion();
+    // Nunca se cobra impuesto sobre una pérdida: si el período dio
+    // negativo, "impuestos" queda en 0 en vez de un número negativo sin
+    // sentido de negocio.
+    const impuestos =
+      gananciasTotales > 0
+        ? Number(((gananciasTotales * porcentajeImpuesto) / 100).toFixed(2))
+        : 0;
+    const gananciaNeta = Number((gananciasTotales - impuestos).toFixed(2));
+
     return {
       ingresosConfirmados,
       ingresosPendientes: Number(pendientes?.monto ?? 0),
@@ -116,15 +164,47 @@ export class FinanzasService {
       ingresosManuales,
       egresosManuales,
       perdidasManuales,
-      balanceTotal: Number(
-        (
-          ingresosConfirmados +
-          ingresosManuales -
-          egresosManuales -
-          perdidasManuales
-        ).toFixed(2),
-      ),
+      gananciasTotales,
+      gastosTotales,
+      porcentajeImpuesto,
+      impuestos,
+      gananciaNeta,
     };
+  }
+
+  /**
+   * Configuración financiera (singleton). Si por algún motivo la fila
+   * seed no existe todavía (entorno recién migrado), se crea con el %
+   * por defecto en vez de romper el resumen.
+   */
+  async obtenerConfiguracion(): Promise<ConfiguracionFinanciera> {
+    const existente = await this.configuracionRepository.findOne({
+      where: { id: CONFIGURACION_SINGLETON_ID },
+    });
+
+    if (existente) {
+      return existente;
+    }
+
+    const nueva = this.configuracionRepository.create({
+      id: CONFIGURACION_SINGLETON_ID,
+      porcentajeImpuesto: PORCENTAJE_IMPUESTO_DEFAULT,
+    });
+    return this.configuracionRepository.save(nueva);
+  }
+
+  /**
+   * Solo SUPER_ADMIN o ADMIN (ver RolesGuard en el controller). El % de
+   * impuesto se guarda en base de datos justamente para que se pueda
+   * ajustar desde acá cuando la normativa chilena lo cambie, sin tocar
+   * código ni redeploy.
+   */
+  async actualizarConfiguracion(
+    dto: UpdateConfiguracionFinancieraDto,
+  ): Promise<ConfiguracionFinanciera> {
+    const configuracion = await this.obtenerConfiguracion();
+    configuracion.porcentajeImpuesto = dto.porcentajeImpuesto;
+    return this.configuracionRepository.save(configuracion);
   }
 
   private async totalesMovimientosManuales(): Promise<{
@@ -152,9 +232,16 @@ export class FinanzasService {
     };
   }
 
-  /** Lista de movimientos manuales, más recientes primero. */
-  async listarMovimientos(): Promise<MovimientoFinanciero[]> {
+  /**
+   * Lista de movimientos manuales, más recientes primero. Si se pasa
+   * `tipo`, filtra (p. ej. la sección "Gastos" del panel solo quiere
+   * ver EGRESO_MANUAL).
+   */
+  async listarMovimientos(
+    tipo?: TipoMovimientoFinanciero,
+  ): Promise<MovimientoFinanciero[]> {
     return this.movimientoRepository.find({
+      where: tipo ? { tipo } : {},
       relations: { usuario: true },
       order: { createdAt: 'DESC' },
       take: 200,
@@ -165,11 +252,39 @@ export class FinanzasService {
     dto: CreateMovimientoFinancieroDto,
     usuarioId: number,
   ): Promise<MovimientoFinanciero> {
+    // La categoría solo tiene sentido para gastos (EGRESO_MANUAL); si
+    // llega en cualquier otro tipo (o no llega) se guarda como null en
+    // vez de confiar ciegamente en lo que mande el cliente.
+    const categoria =
+      dto.tipo === TipoMovimientoFinanciero.EGRESO_MANUAL
+        ? (dto.categoria ?? CategoriaGasto.OTRO)
+        : null;
+
     const movimiento = this.movimientoRepository.create({
       ...dto,
+      categoria,
       usuarioId,
     });
     return this.movimientoRepository.save(movimiento);
+  }
+
+  /** Desglose de gastos (EGRESO_MANUAL) por categoría, mayor a menor. */
+  async gastosPorCategoria(): Promise<GastoPorCategoria[]> {
+    const filas = await this.movimientoRepository
+      .createQueryBuilder('m')
+      .select('m.categoria', 'categoria')
+      .addSelect('COALESCE(SUM(m.monto), 0)', 'total')
+      .where('m.tipo = :tipo', {
+        tipo: TipoMovimientoFinanciero.EGRESO_MANUAL,
+      })
+      .groupBy('m.categoria')
+      .orderBy('total', 'DESC')
+      .getRawMany<{ categoria: CategoriaGasto | null; total: string }>();
+
+    return filas.map((f) => ({
+      categoria: f.categoria ?? 'SIN_CATEGORIA',
+      total: Number(f.total),
+    }));
   }
 
   /**

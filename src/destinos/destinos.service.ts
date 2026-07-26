@@ -12,6 +12,11 @@ import { DestinoImagen } from './entities/destino-imagen.entity';
 import { Categoria } from '../categorias/entities/categoria.entity';
 import { CreateDestinoDto } from './dto/create-destino.dto';
 import { UpdateDestinoDto } from './dto/update-destino.dto';
+import { CacheService } from '../redis/cache.service';
+
+/** Prefijo de todas las claves de caché de este módulo (para invalidar todo junto). */
+const CACHE_PREFIX = 'destinos:';
+const CACHE_TTL_SEGUNDOS = 300; // 5 min: el catálogo cambia poco y se lee mucho
 
 @Injectable()
 export class DestinosService {
@@ -22,7 +27,13 @@ export class DestinosService {
     private readonly destinoImagenRepository: Repository<DestinoImagen>,
     @InjectRepository(Categoria)
     private readonly categoriaRepository: Repository<Categoria>,
+    private readonly cache: CacheService,
   ) {}
+
+  /** Invalida todo lo cacheado de destinos (listados, búsquedas y detalle). */
+  private invalidarCache(): Promise<void> {
+    return this.cache.delByPrefix(CACHE_PREFIX);
+  }
 
   async create(dto: CreateDestinoDto): Promise<Destino> {
     const { imagenes, imagenPrincipal, ...resto } = dto;
@@ -46,6 +57,7 @@ export class DestinosService {
       );
     }
 
+    await this.invalidarCache();
     return this.findOne(guardado.id);
   }
 
@@ -54,11 +66,13 @@ export class DestinosService {
    * solo destinos activos (según el requerimiento del proyecto).
    */
   async findAll(): Promise<Destino[]> {
-    return this.destinoRepository.find({
-      where: { activo: true },
-      relations: { categorias: true, imagenes: true },
-      order: { nombre: 'ASC' },
-    });
+    return this.cache.wrap(`${CACHE_PREFIX}list:public`, CACHE_TTL_SEGUNDOS, () =>
+      this.destinoRepository.find({
+        where: { activo: true },
+        relations: { categorias: true, imagenes: true },
+        order: { nombre: 'ASC' },
+      }),
+    );
   }
 
   /** Listado para el panel admin: incluye destinos desactivados. */
@@ -70,10 +84,15 @@ export class DestinosService {
   }
 
   async findOne(id: number): Promise<Destino> {
-    const destino = await this.destinoRepository.findOne({
-      where: { id },
-      relations: { categorias: true, imagenes: true },
-    });
+    const destino = await this.cache.wrap(
+      `${CACHE_PREFIX}detail:${id}`,
+      CACHE_TTL_SEGUNDOS,
+      () =>
+        this.destinoRepository.findOne({
+          where: { id },
+          relations: { categorias: true, imagenes: true },
+        }),
+    );
 
     if (!destino) {
       throw new NotFoundException('Destino no encontrado');
@@ -94,24 +113,29 @@ export class DestinosService {
       return this.findAll();
     }
 
-    return this.destinoRepository
-      .createQueryBuilder('destino')
-      .where('destino.activo = true')
-      .andWhere(
-        `destino.search_vector @@ plainto_tsquery('spanish', unaccent(:q))`,
-        { q },
-      )
-      .orderBy(
-        `ts_rank(destino.search_vector, plainto_tsquery('spanish', unaccent(:q)))`,
-        'DESC',
-      )
-      .getMany();
+    const clave = `${CACHE_PREFIX}search:${q.trim().toLowerCase()}`;
+    return this.cache.wrap(clave, CACHE_TTL_SEGUNDOS, () =>
+      this.destinoRepository
+        .createQueryBuilder('destino')
+        .where('destino.activo = true')
+        .andWhere(
+          `destino.search_vector @@ plainto_tsquery('spanish', unaccent(:q))`,
+          { q },
+        )
+        .orderBy(
+          `ts_rank(destino.search_vector, plainto_tsquery('spanish', unaccent(:q)))`,
+          'DESC',
+        )
+        .getMany(),
+    );
   }
 
   async update(id: number, dto: UpdateDestinoDto): Promise<Destino> {
     const destino = await this.findOne(id);
     Object.assign(destino, dto);
-    return this.destinoRepository.save(destino);
+    const guardado = await this.destinoRepository.save(destino);
+    await this.invalidarCache();
+    return guardado;
   }
 
   async remove(id: number): Promise<void> {
@@ -132,6 +156,8 @@ export class DestinosService {
       }
       throw error;
     }
+
+    await this.invalidarCache();
   }
 
   // --- Galería de imágenes ---
@@ -155,6 +181,7 @@ export class DestinosService {
       await this.destinoRepository.update(destinoId, { imagenPrincipal: url });
     }
 
+    await this.invalidarCache();
     return guardada;
   }
 
@@ -189,6 +216,8 @@ export class DestinosService {
         imagenPrincipal: siguiente?.url,
       });
     }
+
+    await this.invalidarCache();
   }
 
   /** Marca una imagen de la galería como la "de perfil" del destino. */
@@ -215,6 +244,7 @@ export class DestinosService {
       imagenPrincipal: imagen.url,
     });
 
+    await this.invalidarCache();
     return imagen;
   }
 
@@ -239,6 +269,7 @@ export class DestinosService {
     if (!destino.categorias.some((c) => c.id === categoriaId)) {
       destino.categorias.push(categoria);
       await this.destinoRepository.save(destino);
+      await this.invalidarCache();
     }
 
     return destino;
@@ -255,6 +286,7 @@ export class DestinosService {
     );
 
     await this.destinoRepository.save(destino);
+    await this.invalidarCache();
     return destino;
   }
 }

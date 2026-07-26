@@ -1,17 +1,22 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { InjectQueue } from '@nestjs/bullmq';
+import { Queue } from 'bullmq';
 import * as nodemailer from 'nodemailer';
+
+import { EMAIL_QUEUE, EmailJobData } from './email.queue';
 
 /**
  * Envío de correos transaccionales (confirmación de reserva, confirmación
  * de cotización, aviso de nuevo mensaje de contacto al admin).
  *
- * Diseño a propósito simple: SMTP vía nodemailer, sin colas ni proveedores
- * externos. Es la solución correcta para volumen bajo/medio de una agencia
- * de turismo; n8n o una cola (BullMQ) solo se justifican si el volumen de
- * envíos crece mucho o si se necesita reintentos/orquestación compleja.
+ * El envío real ocurre en segundo plano vía BullMQ (ver email.processor.ts):
+ * los métodos públicos de este servicio (enviarConfirmacionReserva, etc.)
+ * NO bloquean la request HTTP esperando al SMTP ni truenan la operación de
+ * negocio si el correo falla — solo encolan el job. Los reintentos ante
+ * fallas transitorias de SMTP los maneja la cola (ver EmailModule).
  *
- * Si SMTP_HOST no está configurado, el servicio queda "en modo simulado":
+ * Si SMTP_HOST no está configurado, el procesador queda "en modo simulado":
  * loguea el correo en vez de enviarlo, para no romper el flujo de reservas/
  * cotizaciones en un ambiente de desarrollo sin credenciales SMTP reales.
  */
@@ -22,7 +27,10 @@ export class EmailService {
   private readonly fromAddress: string;
   private readonly adminAddress: string;
 
-  constructor(private readonly config: ConfigService) {
+  constructor(
+    private readonly config: ConfigService,
+    @InjectQueue(EMAIL_QUEUE) private readonly queue: Queue<EmailJobData>,
+  ) {
     const host = this.config.get<string>('SMTP_HOST');
     const port = Number(this.config.get<string>('SMTP_PORT') ?? 587);
     const user = this.config.get<string>('SMTP_USER');
@@ -50,27 +58,36 @@ export class EmailService {
     });
   }
 
+  /** Encola el correo para envío en segundo plano (lo usan todos los métodos públicos de abajo). */
   private async send(to: string, subject: string, html: string): Promise<void> {
+    await this.queue.add(
+      'send',
+      { to, subject, html },
+      {
+        attempts: 3,
+        backoff: { type: 'exponential', delay: 5_000 },
+        removeOnComplete: { age: 3600 },
+        removeOnFail: { age: 86_400 },
+      },
+    );
+  }
+
+  /**
+   * Envío real vía SMTP. Solo lo debe llamar EmailProcessor (el worker de
+   * la cola 'email') — nunca el resto del código de negocio directamente.
+   */
+  async sendImmediate(to: string, subject: string, html: string): Promise<void> {
     if (!this.transporter) {
       this.logger.log(`[EMAIL SIMULADO] para=${to} asunto="${subject}"`);
       return;
     }
 
-    try {
-      await this.transporter.sendMail({
-        from: this.fromAddress,
-        to,
-        subject,
-        html,
-      });
-    } catch (error) {
-      // Un correo fallido NUNCA debe tumbar la operación de negocio
-      // (crear la reserva/cotización ya se hizo y quedó guardada). Solo
-      // se registra el error para que el admin lo revise manualmente.
-      this.logger.error(
-        `No se pudo enviar correo a ${to}: ${(error as Error).message}`,
-      );
-    }
+    await this.transporter.sendMail({
+      from: this.fromAddress,
+      to,
+      subject,
+      html,
+    });
   }
 
   async enviarConfirmacionReserva(params: {
@@ -220,6 +237,31 @@ export class EmailService {
          ${params.respuesta}
        </blockquote>
        <p>Puedes ver el detalle e historial completo iniciando sesión en tu cuenta.</p>`,
+    );
+  }
+
+  /** Aviso al admin (asunto "Proveedor nuevo") cuando alguien deja sus datos en "Contacto proveedores". */
+  async notificarProveedorNuevo(params: {
+    nombreNegocio: string;
+    rubro?: string;
+    nombreContacto: string;
+    correo: string;
+    telefono: string;
+    direccion?: string;
+    descripcion: string;
+  }): Promise<void> {
+    await this.send(
+      this.adminAddress,
+      'Proveedor nuevo',
+      `<h3>Nuevo proveedor registrado desde el sitio</h3>
+       <p><strong>Negocio:</strong> ${params.nombreNegocio}</p>
+       ${params.rubro ? `<p><strong>Rubro:</strong> ${params.rubro}</p>` : ''}
+       <p><strong>Contacto:</strong> ${params.nombreContacto}</p>
+       <p><strong>Correo:</strong> ${params.correo}</p>
+       <p><strong>Teléfono:</strong> ${params.telefono}</p>
+       ${params.direccion ? `<p><strong>Dirección:</strong> ${params.direccion}</p>` : ''}
+       <p><strong>Descripción del negocio:</strong></p>
+       <p>${params.descripcion}</p>`,
     );
   }
 }

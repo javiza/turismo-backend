@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 
@@ -75,5 +75,18 @@ export class ClientesAuthController {
   @UseGuards(JwtClienteAuthGuard)
   misCotizaciones(@CurrentCliente() cliente: JwtClientePayload) {
     return this.clientesAuthService.misCotizaciones(cliente.sub);
+  }
+
+  // Cancelar (no elimina) una reserva propia. Se verifica pertenencia
+  // dentro del service antes de tocar cualquier registro.
+  @Patch('mis-reservas/:id/cancelar')
+  @ApiBearerAuth('JWT-cliente')
+  @UseGuards(JwtClienteAuthGuard)
+  @ApiOperation({ summary: 'Cancela una reserva propia del cliente autenticado' })
+  cancelarReserva(
+    @Param('id') id: string,
+    @CurrentCliente() cliente: JwtClientePayload,
+  ) {
+    return this.clientesAuthService.cancelarReserva(+id, cliente.sub);
   }
 }
