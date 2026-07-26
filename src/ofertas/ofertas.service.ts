@@ -202,6 +202,14 @@ export class OfertasService {
     this.validarFechas(fechaInicio, fechaFin);
 
     const { paqueteId, ...resto } = dto;
+
+    // Igual que en PaquetesService.update(): registra cuándo se
+    // desactivó para el borrado automático a los 6 meses, y limpia la
+    // marca si se reactiva.
+    if (typeof resto.activa === 'boolean' && resto.activa !== oferta.activa) {
+      oferta.fechaDesactivacion = resto.activa ? null : new Date();
+    }
+
     Object.assign(oferta, resto);
 
     if (paqueteId) {
@@ -231,6 +239,41 @@ export class OfertasService {
       error instanceof QueryFailedError &&
       (error as unknown as { code?: string }).code === '23503'
     );
+  }
+
+  /**
+   * Ver nota equivalente en PaquetesService.limpiarDesactivadosAntiguos:
+   * borra una por una las ofertas desactivadas hace más de
+   * `mesesRetencion` meses, salteando las que fallen por FK.
+   */
+  async limpiarDesactivadasAntiguas(mesesRetencion: number): Promise<number> {
+    const limite = new Date();
+    limite.setMonth(limite.getMonth() - mesesRetencion);
+
+    const candidatas = await this.ofertaRepository.find({
+      where: { activa: false },
+      select: { id: true, fechaDesactivacion: true },
+    });
+
+    let borradas = 0;
+    for (const candidata of candidatas) {
+      if (
+        !candidata.fechaDesactivacion ||
+        candidata.fechaDesactivacion > limite
+      ) {
+        continue;
+      }
+
+      try {
+        await this.remove(candidata.id);
+        borradas += 1;
+      } catch {
+        // Tiene reservas asociadas u otra restricción: se deja para la
+        // próxima corrida.
+      }
+    }
+
+    return borradas;
   }
 
   // --- Galería de imágenes ---

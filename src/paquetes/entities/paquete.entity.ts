@@ -71,6 +71,13 @@ export class Paquete {
   @Column({ default: true })
   activo!: boolean;
 
+  // Se completa automáticamente en PaquetesService.update() cuando el
+  // admin desactiva el paquete (activo: true -> false) y se limpia si lo
+  // reactiva. TasksScheduler la usa para borrar en forma definitiva los
+  // paquetes que llevan 6 meses desactivados (ver limpiarDesactivadosAntiguos).
+  @Column('timestamp', { name: 'fecha_desactivacion', nullable: true })
+  fechaDesactivacion?: Date | null;
+
   // Denormalizado a propósito: guarda la url de la imagen marcada como
   // "es_principal" en la galería (paquete_imagenes), para poder mostrarla
   // en cards/listados sin tener que traer siempre la relación completa.

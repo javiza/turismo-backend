@@ -27,6 +27,31 @@ export class ContenidoHome {
 @Column('text', { name: 'nombre_agencia', default: 'Tu Agencia de Viajes' })
    nombreAgencia!: string;
 
+  // URL del logo de la agencia (subido a Cloudinary desde el panel admin
+  // o pegado como URL externa). Nullable: mientras no haya logo, el
+  // frontend cae de vuelta al ícono genérico (ver Navbar/Footer).
+  @Column('text', { name: 'logo_url', nullable: true })
+  logoUrl!: string | null;
+
+  // Color (hex) de la frase que acompaña al logo (nombreAgencia en
+  // Navbar/Footer, con tipografía manuscrita — ver navbar.tsx). Editable
+  // por separado del resto del contenido para que el admin pueda ajustar
+  // solo esto sin tocar título/reseñas/etc.
+  @Column('text', { name: 'slogan_color', default: '#c2410c' })
+  sloganColor!: string;
+
+  // Key de la tipografía preseleccionada para el slogan (ver
+  // FUENTES_SLOGAN en el frontend: src/lib/slogan-fonts.ts). Se ignora
+  // en el render público cuando slogan_font_url está presente.
+  @Column('text', { name: 'slogan_font_family', default: 'caveat' })
+  sloganFontFamily!: string;
+
+  // URL (Cloudinary, resource_type raw) de una tipografía propia subida
+  // por el admin. Nullable: mientras no se suba una, el frontend usa la
+  // preseleccionada de sloganFontFamily.
+  @Column('text', { name: 'slogan_font_url', nullable: true })
+  sloganFontUrl!: string | null;
+
   @Column('text')
   titulo!: string;
 
@@ -52,6 +77,18 @@ export class ContenidoHome {
   // libremente desde el panel, por eso JSONB en vez de tabla relacional.
   @Column('jsonb', { default: () => "'[]'" })
   resenas!: ResenaHome[];
+
+  // Datos de contacto de la agencia que se muestran en el Footer
+  // público. Nullable: el Footer omite la línea correspondiente
+  // mientras el admin no las cargue.
+  @Column('text', { nullable: true })
+  telefono!: string | null;
+
+  @Column('text', { nullable: true })
+  correo!: string | null;
+
+  @Column('text', { nullable: true })
+  direccion!: string | null;
 
   @UpdateDateColumn({ name: 'updated_at' })
   updatedAt!: Date;

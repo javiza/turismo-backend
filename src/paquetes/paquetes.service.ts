@@ -223,6 +223,13 @@ export class PaquetesService {
       paquete.precioAnterior = Number(paquete.precio);
     }
 
+    // Registra cuándo se desactivó (para el borrado automático a los 6
+    // meses, ver limpiarDesactivadosAntiguos) y limpia la marca si el
+    // admin lo reactiva.
+    if (typeof resto.activo === 'boolean' && resto.activo !== paquete.activo) {
+      paquete.fechaDesactivacion = resto.activo ? null : new Date();
+    }
+
     Object.assign(paquete, resto);
 
     if (destinoId) {
@@ -277,6 +284,44 @@ export class PaquetesService {
       error instanceof QueryFailedError &&
       (error as unknown as { code?: string }).code === '23503'
     );
+  }
+
+  /**
+   * Borrado definitivo automático: paquetes desactivados hace más de
+   * `mesesRetencion` meses. Se borra uno por uno (no en un único DELETE
+   * masivo) porque un paquete con reservas/ofertas/cotizaciones
+   * asociadas viola la FK y no debe abortar el borrado del resto — se
+   * salta y sigue, igual que remove() hace para el borrado manual desde
+   * el panel. Llamado por TasksProcessor vía el cron de TasksScheduler.
+   */
+  async limpiarDesactivadosAntiguos(mesesRetencion: number): Promise<number> {
+    const limite = new Date();
+    limite.setMonth(limite.getMonth() - mesesRetencion);
+
+    const candidatos = await this.paqueteRepository.find({
+      where: { activo: false },
+      select: { id: true, fechaDesactivacion: true },
+    });
+
+    let borrados = 0;
+    for (const candidato of candidatos) {
+      if (
+        !candidato.fechaDesactivacion ||
+        candidato.fechaDesactivacion > limite
+      ) {
+        continue;
+      }
+
+      try {
+        await this.remove(candidato.id);
+        borrados += 1;
+      } catch {
+        // Tiene reservas/ofertas/cotizaciones asociadas: se deja para
+        // una próxima corrida (o hasta que se libere esa relación).
+      }
+    }
+
+    return borrados;
   }
 
   // --- Galería de imágenes ---

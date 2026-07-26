@@ -3,6 +3,8 @@ import { BullModule } from '@nestjs/bullmq';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 
 import { AuditoriaModule } from '../auditoria/auditoria.module';
+import { PaquetesModule } from '../paquetes/paquetes.module';
+import { OfertasModule } from '../ofertas/ofertas.module';
 import { TasksProcessor } from './tasks.processor';
 import { TasksScheduler } from './tasks.scheduler';
 import { TASKS_QUEUE } from './tasks.queue';
@@ -39,6 +41,8 @@ import { TASKS_QUEUE } from './tasks.queue';
     }),
     BullModule.registerQueue({ name: TASKS_QUEUE }),
     AuditoriaModule,
+    PaquetesModule,
+    OfertasModule,
   ],
   providers: [TasksProcessor, TasksScheduler],
 })

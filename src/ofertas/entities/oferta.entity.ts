@@ -50,6 +50,12 @@ export class Oferta {
   @Column({ default: true })
   activa!: boolean;
 
+  // Ver nota equivalente en Paquete: se completa/limpia sola en
+  // OfertasService.update() y la usa TasksScheduler para el borrado
+  // automático tras 6 meses desactivada.
+  @Column('timestamp', { name: 'fecha_desactivacion', nullable: true })
+  fechaDesactivacion?: Date | null;
+
   // Denormalizado a propósito, igual que en Paquete/Destino: guarda la
   // url de la imagen marcada "es_principal" en oferta_imagenes.
   @Column({ name: 'imagen_principal', type: 'text', nullable: true })

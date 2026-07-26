@@ -31,6 +31,10 @@ export class ContenidoService {
     const nuevo = this.contenidoRepository.create({
       id: SINGLETON_ID,
       nombreAgencia: 'Tu Agencia de Viajes',
+      logoUrl: null,
+      sloganColor: '#c2410c',
+      sloganFontFamily: 'caveat',
+      sloganFontUrl: null,
       titulo: 'Programa tus vacaciones con nosotros',
       subtitulo:
         'Arma tu próximo viaje con destinos, paquetes y ofertas curadas por nuestro equipo — todo reservable en minutos.',
@@ -39,6 +43,9 @@ export class ContenidoService {
       vision: '',
       valores: '',
       resenas: [],
+      telefono: null,
+      correo: null,
+      direccion: null,
     });
 
     return this.contenidoRepository.save(nuevo);
