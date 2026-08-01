@@ -76,7 +76,11 @@ export class EmailService {
    * Envío real vía SMTP. Solo lo debe llamar EmailProcessor (el worker de
    * la cola 'email') — nunca el resto del código de negocio directamente.
    */
-  async sendImmediate(to: string, subject: string, html: string): Promise<void> {
+  async sendImmediate(
+    to: string,
+    subject: string,
+    html: string,
+  ): Promise<void> {
     if (!this.transporter) {
       this.logger.log(`[EMAIL SIMULADO] para=${to} asunto="${subject}"`);
       return;
@@ -237,6 +241,24 @@ export class EmailService {
          ${params.respuesta}
        </blockquote>
        <p>Puedes ver el detalle e historial completo iniciando sesión en tu cuenta.</p>`,
+    );
+  }
+
+  /** Correo con el enlace para restablecer la contraseña (flujo "olvidé mi contraseña" de clientes). */
+  async enviarRecuperacionPassword(params: {
+    email: string;
+    nombre: string;
+    resetUrl: string;
+  }): Promise<void> {
+    if (!params.email) return;
+
+    await this.send(
+      params.email,
+      'Recupera tu contraseña',
+      `<h2>Hola ${params.nombre},</h2>
+       <p>Recibimos una solicitud para restablecer la contraseña de tu cuenta.</p>
+       <p><a href="${params.resetUrl}" style="display:inline-block;background:#c2410c;color:#fff;padding:10px 20px;border-radius:8px;text-decoration:none;">Restablecer contraseña</a></p>
+       <p>Este enlace vence en 1 hora. Si tú no solicitaste esto, puedes ignorar este correo: tu contraseña seguirá siendo la misma.</p>`,
     );
   }
 

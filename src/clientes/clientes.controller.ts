@@ -1,13 +1,16 @@
 import {
+  Body,
   Controller,
   Get,
   Param,
   Patch,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth } from '@nestjs/swagger';
 
 import { ClientesService } from './clientes.service';
+import { UpdateClienteAdminDto } from './dto/update-cliente-admin.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
@@ -25,14 +28,23 @@ import { Role } from '../common/constants/roles.enum';
 export class ClientesController {
   constructor(private readonly clientesService: ClientesService) {}
 
+  // ?q= busca por nombre, email o RUT (coincidencia parcial). Sin el
+  // parámetro, devuelve todos los clientes ordenados por más reciente.
   @Get()
-  findAll() {
-    return this.clientesService.findAll();
+  findAll(@Query('q') q?: string) {
+    return this.clientesService.findAll(q);
   }
 
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.clientesService.findOne(+id);
+  }
+
+  // Edición puntual desde el panel admin (típicamente para completar el
+  // RUT de un cliente que se registró sin cargarlo).
+  @Patch(':id')
+  actualizar(@Param('id') id: string, @Body() dto: UpdateClienteAdminDto) {
+    return this.clientesService.actualizar(+id, dto);
   }
 
   @Patch(':id/deactivate')

@@ -9,12 +9,14 @@ import { JwtClienteStrategy } from './strategies/jwt-cliente.strategy';
 import { ClientesModule } from '../clientes/clientes.module';
 import { ReservasModule } from '../reservas/reservas.module';
 import { CotizacionesModule } from '../cotizaciones/cotizaciones.module';
+import { EmailModule } from '../email/email.module';
 
 @Module({
   imports: [
     ClientesModule,
     ReservasModule,
     CotizacionesModule,
+    EmailModule,
     PassportModule,
     // registerAsync + su propio secret (JWT_CLIENTE_SECRET, distinto del
     // JWT_SECRET de admins): un token de cliente firmado acá jamás va a

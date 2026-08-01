@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Patch, Post, UseGuards } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import {
   ApiBearerAuth,
@@ -10,6 +10,7 @@ import {
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
+import { CambiarPasswordDto } from '../common/dto/cambiar-password.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import type { JwtPayload } from './interfaces/jwt-payload.interface';
@@ -59,5 +60,14 @@ export class AuthController {
   @ApiOperation({ summary: 'Perfil del administrador autenticado' })
   profile(@CurrentUser() user: JwtPayload) {
     return this.authService.profile(user.sub);
+  }
+
+  @Patch('password')
+  @ApiBearerAuth('JWT-auth')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Cambia la contraseña del administrador autenticado' })
+  @ApiResponse({ status: 401, description: 'La contraseña actual no es correcta' })
+  cambiarPassword(@Body() dto: CambiarPasswordDto, @CurrentUser() user: JwtPayload) {
+    return this.authService.cambiarPassword(user.sub, dto.passwordActual, dto.passwordNueva);
   }
 }

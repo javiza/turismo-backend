@@ -88,6 +88,12 @@ export class AuthService {
     return this.usersService.findOne(userId);
   }
 
+  /** Cualquier admin/staff autenticado puede cambiar su propia contraseña. */
+  async cambiarPassword(userId: number, passwordActual: string, passwordNueva: string) {
+    await this.usersService.cambiarPassword(userId, passwordActual, passwordNueva);
+    return { message: 'Contraseña actualizada correctamente' };
+  }
+
   private getTokens(user: User) {
     const payload = {
       sub: user.id,

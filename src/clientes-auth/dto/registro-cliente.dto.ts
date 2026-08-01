@@ -1,4 +1,10 @@
-import { IsEmail, IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
+import {
+  IsEmail,
+  IsOptional,
+  IsString,
+  MaxLength,
+  MinLength,
+} from 'class-validator';
 
 export class RegistroClienteDto {
   @IsString()
@@ -17,4 +23,9 @@ export class RegistroClienteDto {
   @IsString()
   @MaxLength(50)
   telefono?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(20)
+  rut?: string;
 }

@@ -5,6 +5,7 @@ import {
   Param,
   Body,
   Patch,
+  Query,
 } from '@nestjs/common';
 
 import { UsersService } from './users.service';
@@ -46,8 +47,8 @@ export class UsersController {
     Role.SUPER_ADMIN,
     Role.ADMIN,
   )
-  findAll() {
-    return this.usersService.findAll();
+  findAll(@Query('q') q?: string) {
+    return this.usersService.findAll(q);
   }
 
   @Get(':id')
@@ -76,5 +77,13 @@ deactivate(
   return this.usersService.deactivate(
     +id,
   );
+}
+
+@Patch(':id/reactivate')
+@ApiBearerAuth('JWT-auth')
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles(Role.SUPER_ADMIN)
+reactivate(@Param('id') id: string) {
+  return this.usersService.reactivate(+id);
 }
 }

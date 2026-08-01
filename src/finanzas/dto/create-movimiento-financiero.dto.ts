@@ -1,5 +1,6 @@
 import {
   IsEnum,
+  IsInt,
   IsNumber,
   IsPositive,
   IsString,
@@ -11,6 +12,7 @@ import {
 import {
   TipoMovimientoFinanciero,
   CategoriaGasto,
+  MetodoPago,
 } from '../entities/movimiento-financiero.entity';
 
 export class CreateMovimientoFinancieroDto {
@@ -39,4 +41,32 @@ export class CreateMovimientoFinancieroDto {
   @IsEnum(CategoriaGasto)
   @IsOptional()
   categoria?: CategoriaGasto;
+
+  // "Quién pagó" — solo tiene sentido cuando el movimiento es un
+  // ingreso (INGRESO_MANUAL). Igual criterio que categoria: se ignora
+  // para el resto de los tipos aunque venga en el body.
+  @ValidateIf(
+    (dto: CreateMovimientoFinancieroDto) =>
+      dto.tipo === TipoMovimientoFinanciero.INGRESO_MANUAL,
+  )
+  @IsOptional()
+  @IsInt()
+  clienteId?: number;
+
+  @ValidateIf(
+    (dto: CreateMovimientoFinancieroDto) =>
+      dto.tipo === TipoMovimientoFinanciero.INGRESO_MANUAL,
+  )
+  @IsOptional()
+  @IsString()
+  @MaxLength(150)
+  pagadorNombre?: string;
+
+  @ValidateIf(
+    (dto: CreateMovimientoFinancieroDto) =>
+      dto.tipo === TipoMovimientoFinanciero.INGRESO_MANUAL,
+  )
+  @IsOptional()
+  @IsEnum(MetodoPago)
+  metodoPago?: MetodoPago;
 }

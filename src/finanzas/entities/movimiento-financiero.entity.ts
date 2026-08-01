@@ -8,6 +8,7 @@ import {
 } from 'typeorm';
 
 import { User } from '../../users/entities/user.entity';
+import { Cliente } from '../../clientes/entities/cliente.entity';
 import { numericTransformer } from '../../common/transformers/numeric.transformer';
 
 /**
@@ -49,6 +50,15 @@ export enum CategoriaGasto {
   OTRO = 'OTRO',
 }
 
+/** Método de pago del ingreso. Solo tiene sentido cuando tipo = INGRESO_MANUAL. */
+export enum MetodoPago {
+  EFECTIVO = 'EFECTIVO',
+  TRANSFERENCIA = 'TRANSFERENCIA',
+  TARJETA = 'TARJETA',
+  WEBPAY = 'WEBPAY',
+  OTRO = 'OTRO',
+}
+
 @Entity('movimientos_financieros')
 export class MovimientoFinanciero {
   @PrimaryGeneratedColumn()
@@ -76,6 +86,25 @@ export class MovimientoFinanciero {
   @ManyToOne(() => User, { onDelete: 'SET NULL', nullable: true })
   @JoinColumn({ name: 'usuario_id' })
   usuario?: User;
+
+  // "Quién pagó" — detalle del ingreso manual (requerimiento de negocio:
+  // por ahora se carga a mano, más adelante se podría llenar solo desde
+  // una pasarela de pago real). Dos formas de identificar al pagador,
+  // no excluyentes: vínculo a un cliente con cuenta (clienteId) y/o un
+  // nombre libre (pagadorNombre) para pagos en efectivo de alguien sin
+  // cuenta registrada. Solo tienen sentido cuando tipo = INGRESO_MANUAL.
+  @Column({ name: 'cliente_id', nullable: true })
+  clienteId?: number | null;
+
+  @ManyToOne(() => Cliente, { onDelete: 'SET NULL', nullable: true })
+  @JoinColumn({ name: 'cliente_id' })
+  cliente?: Cliente | null;
+
+  @Column({ name: 'pagador_nombre', type: 'varchar', length: 150, nullable: true })
+  pagadorNombre?: string | null;
+
+  @Column({ name: 'metodo_pago', type: 'varchar', length: 30, nullable: true })
+  metodoPago?: MetodoPago | null;
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt!: Date;

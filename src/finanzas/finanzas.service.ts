@@ -242,7 +242,7 @@ export class FinanzasService {
   ): Promise<MovimientoFinanciero[]> {
     return this.movimientoRepository.find({
       where: tipo ? { tipo } : {},
-      relations: { usuario: true },
+      relations: { usuario: true, cliente: true },
       order: { createdAt: 'DESC' },
       take: 200,
     });
@@ -260,12 +260,26 @@ export class FinanzasService {
         ? (dto.categoria ?? CategoriaGasto.OTRO)
         : null;
 
+    // El detalle de "quién pagó" solo tiene sentido para ingresos
+    // (INGRESO_MANUAL); mismo criterio que categoria arriba.
+    const esIngreso = dto.tipo === TipoMovimientoFinanciero.INGRESO_MANUAL;
+
     const movimiento = this.movimientoRepository.create({
       ...dto,
       categoria,
+      clienteId: esIngreso ? (dto.clienteId ?? null) : null,
+      pagadorNombre: esIngreso ? (dto.pagadorNombre ?? null) : null,
+      metodoPago: esIngreso ? (dto.metodoPago ?? null) : null,
       usuarioId,
     });
-    return this.movimientoRepository.save(movimiento);
+    const guardado = await this.movimientoRepository.save(movimiento);
+    // Recarga con la relación cliente para que la respuesta ya traiga
+    // el nombre del cliente vinculado (si corresponde), sin que el
+    // frontend tenga que pedirlo aparte.
+    return this.movimientoRepository.findOneOrFail({
+      where: { id: guardado.id },
+      relations: { usuario: true, cliente: true },
+    });
   }
 
   /** Desglose de gastos (EGRESO_MANUAL) por categoría, mayor a menor. */

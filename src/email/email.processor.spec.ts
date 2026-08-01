@@ -20,7 +20,11 @@ describe('EmailProcessor', () => {
 
     await processor.process(job);
 
-    expect(emailService.sendImmediate).toHaveBeenCalledWith('a@a.com', 'Hola', '<p>hi</p>');
+    expect(emailService.sendImmediate).toHaveBeenCalledWith(
+      'a@a.com',
+      'Hola',
+      '<p>hi</p>',
+    );
   });
 
   it('relanza el error para que BullMQ reintente el job', async () => {

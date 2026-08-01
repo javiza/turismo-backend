@@ -2,15 +2,19 @@ import {
   Injectable,
   NotFoundException,
   ConflictException,
+  UnauthorizedException,
+  BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
+import { randomBytes } from 'crypto';
 import { getBcryptRounds } from '../common/utils/bcrypt-rounds';
-import { hashToken } from '../common/utils/token-hash';
+import { hashToken, tokenMatches } from '../common/utils/token-hash';
 
 import { Cliente } from './entities/cliente.entity';
 import { RegistroClienteDto } from '../clientes-auth/dto/registro-cliente.dto';
+import { UpdateClienteAdminDto } from './dto/update-cliente-admin.dto';
 
 @Injectable()
 export class ClientesService {
@@ -34,6 +38,7 @@ export class ClientesService {
       nombre: dto.nombre,
       email: dto.email,
       telefono: dto.telefono,
+      rut: dto.rut,
       password,
       activo: true,
     });
@@ -65,9 +70,25 @@ export class ClientesService {
     await this.clienteRepository.update(id, { hashedRefreshToken: null });
   }
 
-  /** Panel admin: gestión de clientes (requerimiento "gestionar usuarios clientes"). */
-  async findAll(): Promise<Cliente[]> {
-    return this.clienteRepository.find({ order: { createdAt: 'DESC' } });
+  /**
+   * Panel admin: gestión de clientes (requerimiento "gestionar usuarios
+   * clientes"). `q`, si viene, filtra por nombre, email o RUT
+   * (case-insensitive, coincidencia parcial) — el admin normalmente
+   * busca por uno de esos tres datos para ubicar a un cliente puntual.
+   */
+  async findAll(q?: string): Promise<Cliente[]> {
+    if (!q) {
+      return this.clienteRepository.find({ order: { createdAt: 'DESC' } });
+    }
+
+    const termino = `%${q.trim()}%`;
+    return this.clienteRepository
+      .createQueryBuilder('cliente')
+      .where('cliente.nombre ILIKE :termino', { termino })
+      .orWhere('cliente.email ILIKE :termino', { termino })
+      .orWhere('cliente.rut ILIKE :termino', { termino })
+      .orderBy('cliente.createdAt', 'DESC')
+      .getMany();
   }
 
   async deactivate(id: number): Promise<Cliente> {
@@ -76,9 +97,89 @@ export class ClientesService {
     return this.clienteRepository.save(cliente);
   }
 
+  /** Edición de datos por el admin (nombre/teléfono/RUT) — típicamente para completar el RUT de un cliente que se registró sin cargarlo. */
+  async actualizar(id: number, dto: UpdateClienteAdminDto): Promise<Cliente> {
+    const cliente = await this.findOne(id);
+    Object.assign(cliente, dto);
+    return this.clienteRepository.save(cliente);
+  }
+
   async reactivate(id: number): Promise<Cliente> {
     const cliente = await this.findOne(id);
     cliente.activo = true;
     return this.clienteRepository.save(cliente);
+  }
+
+  /** Cambio de contraseña propio del cliente autenticado. Mismo criterio que UsersService.cambiarPassword. */
+  async cambiarPassword(
+    clienteId: number,
+    passwordActual: string,
+    passwordNueva: string,
+  ): Promise<void> {
+    const cliente = await this.findOne(clienteId);
+
+    const coincide = await bcrypt.compare(passwordActual, cliente.password);
+    if (!coincide) {
+      throw new UnauthorizedException('La contraseña actual no es correcta');
+    }
+
+    cliente.password = await bcrypt.hash(passwordNueva, getBcryptRounds());
+    await this.clienteRepository.save(cliente);
+  }
+
+  /**
+   * Genera un token de reseteo (válido 1 hora) y lo guarda hasheado.
+   * Devuelve el token EN CRUDO (solo para que el caller lo mande por
+   * correo) o null si no existe una cuenta activa con ese email — el
+   * caller debe responder igual en ambos casos (ver
+   * ClientesAuthService.forgotPassword) para no filtrar qué emails
+   * están registrados.
+   */
+  async generarTokenReseteo(
+    email: string,
+  ): Promise<{ cliente: Cliente; token: string } | null> {
+    const cliente = await this.findByEmail(email);
+    if (!cliente || !cliente.activo) return null;
+
+    const token = randomBytes(32).toString('hex');
+    cliente.resetPasswordToken = hashToken(token);
+    cliente.resetPasswordExpires = new Date(Date.now() + 60 * 60 * 1000); // 1 hora
+    await this.clienteRepository.save(cliente);
+
+    return { cliente, token };
+  }
+
+  /** Restablece la contraseña usando el token enviado por correo (ver generarTokenReseteo). */
+  async resetearPasswordConToken(
+    token: string,
+    passwordNueva: string,
+  ): Promise<void> {
+    // No hay forma de buscar directo por el token crudo (se guarda
+    // hasheado), así que se trae a los candidatos con un token vigente
+    // y se compara en tiempo constante con tokenMatches — mismo patrón
+    // que el refresh token.
+    const candidatos = await this.clienteRepository
+      .createQueryBuilder('cliente')
+      .where('cliente.resetPasswordToken IS NOT NULL')
+      .andWhere('cliente.resetPasswordExpires > :ahora', { ahora: new Date() })
+      .getMany();
+
+    const cliente = candidatos.find((c) =>
+      tokenMatches(token, c.resetPasswordToken as string),
+    );
+
+    if (!cliente) {
+      throw new BadRequestException(
+        'El enlace de recuperación no es válido o venció',
+      );
+    }
+
+    cliente.password = await bcrypt.hash(passwordNueva, getBcryptRounds());
+    cliente.resetPasswordToken = null;
+    cliente.resetPasswordExpires = null;
+    // Invalida también cualquier sesión activa, como al cambiar la
+    // contraseña desde "Mi cuenta".
+    cliente.hashedRefreshToken = null;
+    await this.clienteRepository.save(cliente);
   }
 }

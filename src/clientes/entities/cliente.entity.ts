@@ -32,12 +32,36 @@ export class Cliente {
   @Column({ length: 50, nullable: true })
   telefono?: string;
 
+  // RUT chileno (con o sin puntos/guión, tal como lo escriba el admin o
+  // el propio cliente). Nullable porque el registro no lo pide todavía;
+  // se completa después desde el panel admin o el perfil del cliente.
+  // Sirve principalmente para que el admin pueda buscar/identificar
+  // clientes por RUT (ver ClientesService.findAll).
+  @Column({ length: 20, nullable: true })
+  rut?: string;
+
   @Column({ default: true })
   activo!: boolean;
 
   @Exclude()
   @Column({ name: 'hashed_refresh_token', type: 'text', nullable: true })
   hashedRefreshToken!: string | null;
+
+  // "Olvidé mi contraseña": token de un solo uso (hasheado, ver
+  // common/utils/token-hash.ts) y su expiración. Ambos nulos fuera de una
+  // solicitud de reseteo en curso.
+  @Exclude()
+  @Column({
+    name: 'reset_password_token',
+    type: 'varchar',
+    length: 255,
+    nullable: true,
+  })
+  resetPasswordToken!: string | null;
+
+  @Exclude()
+  @Column({ name: 'reset_password_expires', type: 'timestamp', nullable: true })
+  resetPasswordExpires!: Date | null;
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt!: Date;

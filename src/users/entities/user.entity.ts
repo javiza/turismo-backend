@@ -38,6 +38,15 @@ password!: string;
   })
   rol!: UserRole;
 
+  // RUT del miembro del equipo (opcional, nullable). Igual criterio que
+  // en Cliente: sirve para que un SUPER_ADMIN pueda ubicar/identificar
+  // cuentas internas por RUT además de nombre/email.
+  @Column({
+    length: 20,
+    nullable: true,
+  })
+  rut?: string;
+
   @Column({
     default: true,
   })

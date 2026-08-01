@@ -3,6 +3,7 @@ import {
   IsEnum,
   IsOptional,
   IsString,
+  MaxLength,
   MinLength,
 } from 'class-validator';
 
@@ -21,4 +22,9 @@ export class CreateUserDto {
   @IsOptional()
   @IsEnum(UserRole)
   rol?: UserRole;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(20)
+  rut?: string;
 }

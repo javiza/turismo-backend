@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   ConflictException,
+  UnauthorizedException,
 } from '@nestjs/common';
 
 import { InjectRepository } from '@nestjs/typeorm';
@@ -54,8 +55,21 @@ export class UsersService {
     );
   }
 
-  async findAll(): Promise<User[]> {
-    return await this.userRepository.find();
+  // ?q= busca por nombre, email o RUT (coincidencia parcial), igual
+  // criterio que ClientesService.findAll — el admin normalmente busca
+  // así en el panel de "Usuarios".
+  async findAll(q?: string): Promise<User[]> {
+    if (!q) {
+      return await this.userRepository.find();
+    }
+
+    const termino = `%${q.trim()}%`;
+    return this.userRepository
+      .createQueryBuilder('usuario')
+      .where('usuario.nombre ILIKE :termino', { termino })
+      .orWhere('usuario.email ILIKE :termino', { termino })
+      .orWhere('usuario.rut ILIKE :termino', { termino })
+      .getMany();
   }
 
   async findOne(
@@ -94,6 +108,12 @@ export class UsersService {
     user,
   );
 }
+
+async reactivate(id: number) {
+  const user = await this.findOne(id);
+  user.activo = true;
+  return this.userRepository.save(user);
+}
 async updateRefreshToken(
   userId: number,
   refreshToken: string,
@@ -110,6 +130,27 @@ async clearRefreshToken(userId: number): Promise<void> {
   await this.userRepository.update(userId, {
     hashedRefreshToken: null,
   });
+}
+
+/**
+ * Cambio de contraseña propio (cualquier admin/staff autenticado, sin
+ * importar su rol). Verifica la contraseña actual antes de aplicar la
+ * nueva — ver CambiarPasswordDto para el porqué.
+ */
+async cambiarPassword(
+  userId: number,
+  passwordActual: string,
+  passwordNueva: string,
+): Promise<void> {
+  const user = await this.findOne(userId);
+
+  const coincide = await bcrypt.compare(passwordActual, user.password);
+  if (!coincide) {
+    throw new UnauthorizedException('La contraseña actual no es correcta');
+  }
+
+  user.password = await bcrypt.hash(passwordNueva, getBcryptRounds());
+  await this.userRepository.save(user);
 }
 
 }

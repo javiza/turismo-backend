@@ -6,12 +6,14 @@ import * as bcrypt from 'bcrypt';
 import { ClientesService } from '../clientes/clientes.service';
 import { Cliente } from '../clientes/entities/cliente.entity';
 import { RegistroClienteDto } from './dto/registro-cliente.dto';
+import { UpdatePerfilClienteDto } from './dto/update-perfil-cliente.dto';
 import { LoginClienteDto } from './dto/login-cliente.dto';
 import { RefreshTokenClienteDto } from './dto/refresh-token-cliente.dto';
 import { ReservasService } from '../reservas/reservas.service';
 import { CotizacionesService } from '../cotizaciones/cotizaciones.service';
 import { JwtClientePayload } from './interfaces/jwt-cliente-payload.interface';
 import { tokenMatches } from '../common/utils/token-hash';
+import { EmailService } from '../email/email.service';
 
 @Injectable()
 export class ClientesAuthService {
@@ -21,6 +23,7 @@ export class ClientesAuthService {
     private readonly config: ConfigService,
     private readonly reservasService: ReservasService,
     private readonly cotizacionesService: CotizacionesService,
+    private readonly emailService: EmailService,
   ) {}
 
   async registro(dto: RegistroClienteDto) {
@@ -61,7 +64,9 @@ export class ClientesAuthService {
     try {
       payload = await this.jwtService.verifyAsync<JwtClientePayload>(
         dto.refreshToken,
-        { secret: this.config.getOrThrow<string>('JWT_CLIENTE_REFRESH_SECRET') },
+        {
+          secret: this.config.getOrThrow<string>('JWT_CLIENTE_REFRESH_SECRET'),
+        },
       );
     } catch {
       throw new UnauthorizedException('Refresh token inválido o vencido');
@@ -94,6 +99,58 @@ export class ClientesAuthService {
     return this.clientesService.findOne(clienteId);
   }
 
+  async actualizarPerfil(clienteId: number, dto: UpdatePerfilClienteDto) {
+    return this.clientesService.actualizar(clienteId, dto);
+  }
+
+  async cambiarPassword(
+    clienteId: number,
+    passwordActual: string,
+    passwordNueva: string,
+  ) {
+    await this.clientesService.cambiarPassword(
+      clienteId,
+      passwordActual,
+      passwordNueva,
+    );
+    return { message: 'Contraseña actualizada correctamente' };
+  }
+
+  /**
+   * Siempre responde igual (mensaje genérico) exista o no una cuenta con
+   * ese email, para no dejarle a un atacante confirmar qué correos están
+   * registrados. El correo con el enlace solo se envía si la cuenta
+   * existe y está activa.
+   */
+  async forgotPassword(email: string) {
+    const resultado = await this.clientesService.generarTokenReseteo(email);
+
+    if (resultado) {
+      const frontendUrl =
+        this.config.get<string>('FRONTEND_URL') ?? 'http://localhost:3001';
+      const resetUrl = `${frontendUrl}/restablecer-password?token=${resultado.token}`;
+
+      await this.emailService.enviarRecuperacionPassword({
+        email: resultado.cliente.email,
+        nombre: resultado.cliente.nombre,
+        resetUrl,
+      });
+    }
+
+    return {
+      message:
+        'Si el correo está registrado, te enviamos un enlace para restablecer tu contraseña.',
+    };
+  }
+
+  async resetPassword(token: string, passwordNueva: string) {
+    await this.clientesService.resetearPasswordConToken(token, passwordNueva);
+    return {
+      message:
+        'Contraseña restablecida correctamente. Ya puedes iniciar sesión.',
+    };
+  }
+
   async misReservas(clienteId: number) {
     return this.reservasService.findByCliente(clienteId);
   }
@@ -118,17 +175,15 @@ export class ClientesAuthService {
     return {
       access_token: this.jwtService.sign(payload, {
         secret: this.config.getOrThrow<string>('JWT_CLIENTE_SECRET'),
-        expiresIn: this.config.getOrThrow<string>('JWT_CLIENTE_ACCESS_EXPIRES') as
-          | number
-          | `${number}${'s' | 'm' | 'h' | 'd'}`
-          | undefined,
+        expiresIn: this.config.getOrThrow<string>(
+          'JWT_CLIENTE_ACCESS_EXPIRES',
+        ) as number | `${number}${'s' | 'm' | 'h' | 'd'}` | undefined,
       }),
       refresh_token: this.jwtService.sign(payload, {
         secret: this.config.getOrThrow<string>('JWT_CLIENTE_REFRESH_SECRET'),
-        expiresIn: this.config.getOrThrow<string>('JWT_CLIENTE_REFRESH_EXPIRES') as
-          | number
-          | `${number}${'s' | 'm' | 'h' | 'd'}`
-          | undefined,
+        expiresIn: this.config.getOrThrow<string>(
+          'JWT_CLIENTE_REFRESH_EXPIRES',
+        ) as number | `${number}${'s' | 'm' | 'h' | 'd'}` | undefined,
       }),
     };
   }
