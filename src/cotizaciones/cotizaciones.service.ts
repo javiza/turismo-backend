@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, QueryFailedError } from 'typeorm';
 import { EventEmitter2 } from '@nestjs/event-emitter';
@@ -7,6 +11,7 @@ import { Cotizacion, EstadoCotizacion } from './entities/cotizacion.entity';
 import { Paquete } from '../paquetes/entities/paquete.entity';
 import { Cliente } from '../clientes/entities/cliente.entity';
 import { Destino } from '../destinos/entities/destino.entity';
+import { Noticia } from '../noticias/entities/noticia.entity';
 import { CreateCotizacionDto } from './dto/create-cotizacion.dto';
 import { UpdateCotizacionDto } from './dto/update-cotizacion.dto';
 import { AdminCotizacionDto } from './dto/admin-cotizacion.dto';
@@ -26,11 +31,16 @@ export class CotizacionesService {
     private readonly paqueteRepository: Repository<Paquete>,
     @InjectRepository(Destino)
     private readonly destinoRepository: Repository<Destino>,
+    @InjectRepository(Noticia)
+    private readonly noticiaRepository: Repository<Noticia>,
     private readonly eventEmitter: EventEmitter2,
   ) {}
 
-  /** Público: botón "Consultar" sobre un paquete, un destino, o cotización general. */
-  async create(dto: CreateCotizacionDto, clienteId?: number): Promise<Cotizacion> {
+  /** Público: botón "Consultar" sobre un paquete, un destino, una noticia, o cotización general. */
+  async create(
+    dto: CreateCotizacionDto,
+    clienteId?: number,
+  ): Promise<Cotizacion> {
     const cotizacion = this.cotizacionRepository.create({
       nombre: dto.nombre,
       email: dto.email,
@@ -39,6 +49,7 @@ export class CotizacionesService {
       mensaje: dto.mensaje,
       paquete: dto.paqueteId ? ({ id: dto.paqueteId } as Paquete) : undefined,
       destino: dto.destinoId ? ({ id: dto.destinoId } as Destino) : undefined,
+      noticia: dto.noticiaId ? ({ id: dto.noticiaId } as Noticia) : undefined,
       cliente: clienteId ? ({ id: clienteId } as Cliente) : undefined,
     });
 
@@ -50,19 +61,28 @@ export class CotizacionesService {
         error instanceof QueryFailedError &&
         (error as unknown as { code?: string }).code === '23503'
       ) {
-        throw new BadRequestException('El paquete o destino indicado no existe');
+        throw new BadRequestException(
+          'El paquete, destino o noticia indicado no existe',
+        );
       }
       throw error;
     }
 
-    // Nombre del paquete/destino para el correo (si la consulta viene desde
-    // una ficha específica), sin bloquear la respuesta si falla.
+    // Nombre del paquete/destino/noticia para el correo (si la consulta
+    // viene desde una ficha específica), sin bloquear la respuesta si falla.
     const nombrePaquete = dto.paqueteId
-      ? (await this.paqueteRepository.findOne({ where: { id: dto.paqueteId } }))?.nombre
+      ? (await this.paqueteRepository.findOne({ where: { id: dto.paqueteId } }))
+          ?.nombre
       : undefined;
 
     const nombreDestino = dto.destinoId
-      ? (await this.destinoRepository.findOne({ where: { id: dto.destinoId } }))?.nombre
+      ? (await this.destinoRepository.findOne({ where: { id: dto.destinoId } }))
+          ?.nombre
+      : undefined;
+
+    const nombreNoticia = dto.noticiaId
+      ? (await this.noticiaRepository.findOne({ where: { id: dto.noticiaId } }))
+          ?.titulo
       : undefined;
 
     this.eventEmitter.emit(
@@ -76,6 +96,7 @@ export class CotizacionesService {
         guardada.mensaje,
         nombrePaquete,
         nombreDestino,
+        nombreNoticia,
       ),
     );
 
@@ -85,7 +106,7 @@ export class CotizacionesService {
   /** Panel admin: todas las cotizaciones, más recientes primero. */
   async findAll(): Promise<Cotizacion[]> {
     return this.cotizacionRepository.find({
-      relations: { paquete: true, destino: true },
+      relations: { paquete: true, destino: true, noticia: true },
       order: { createdAt: 'DESC' },
     });
   }
@@ -106,7 +127,7 @@ export class CotizacionesService {
   async findByCliente(clienteId: number): Promise<Cotizacion[]> {
     return this.cotizacionRepository.find({
       where: { clienteId },
-      relations: { paquete: true, destino: true },
+      relations: { paquete: true, destino: true, noticia: true },
       order: { createdAt: 'DESC' },
     });
   }
@@ -114,7 +135,7 @@ export class CotizacionesService {
   async findOne(id: number): Promise<Cotizacion> {
     const cotizacion = await this.cotizacionRepository.findOne({
       where: { id },
-      relations: { paquete: true, destino: true },
+      relations: { paquete: true, destino: true, noticia: true },
     });
 
     if (!cotizacion) {
@@ -124,7 +145,10 @@ export class CotizacionesService {
     return cotizacion;
   }
 
-  async updateEstado(id: number, dto: UpdateCotizacionDto): Promise<Cotizacion> {
+  async updateEstado(
+    id: number,
+    dto: UpdateCotizacionDto,
+  ): Promise<Cotizacion> {
     const cotizacion = await this.findOne(id);
     cotizacion.estado = dto.estado;
     return this.cotizacionRepository.save(cotizacion);
@@ -165,6 +189,7 @@ export class CotizacionesService {
           dto.respuesta,
           guardada.paquete?.nombre,
           guardada.destino?.nombre,
+          guardada.noticia?.titulo,
         ),
       );
     }

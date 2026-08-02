@@ -35,6 +35,8 @@ export class ContenidoService {
       sloganColor: '#c2410c',
       sloganFontFamily: 'caveat',
       sloganFontUrl: null,
+      colorFondo: null,
+      colorNavbar: null,
       titulo: 'Programa tus vacaciones con nosotros',
       subtitulo:
         'Arma tu próximo viaje con destinos, paquetes y ofertas curadas por nuestro equipo — todo reservable en minutos.',

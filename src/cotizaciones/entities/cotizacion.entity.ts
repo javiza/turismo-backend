@@ -10,6 +10,7 @@ import {
 import { Paquete } from '../../paquetes/entities/paquete.entity';
 import { Cliente } from '../../clientes/entities/cliente.entity';
 import { Destino } from '../../destinos/entities/destino.entity';
+import { Noticia } from '../../noticias/entities/noticia.entity';
 
 export enum EstadoCotizacion {
   PENDIENTE = 'PENDIENTE',
@@ -55,6 +56,16 @@ export class Cotizacion {
   @ManyToOne(() => Destino, { nullable: true })
   @JoinColumn({ name: 'destino_id' })
   destino?: Destino;
+
+  // Consulta hecha desde el botón "Consultas al administrador" de una
+  // noticia. Igual que paqueteId/destinoId: opcional, para no romper la
+  // consulta general.
+  @Column({ name: 'noticia_id', nullable: true })
+  noticiaId?: number;
+
+  @ManyToOne(() => Noticia, { nullable: true })
+  @JoinColumn({ name: 'noticia_id' })
+  noticia?: Noticia;
 
   @Column({ length: 150 })
   nombre!: string;

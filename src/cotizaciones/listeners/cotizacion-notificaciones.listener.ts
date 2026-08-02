@@ -25,6 +25,7 @@ export class CotizacionNotificacionesListener {
         nombre: event.nombre,
         nombrePaquete: event.nombrePaquete,
         nombreDestino: event.nombreDestino,
+        nombreNoticia: event.nombreNoticia,
       });
 
       // Correo al equipo (ADMIN_NOTIFICATION_EMAIL) con la pregunta real.
@@ -34,6 +35,7 @@ export class CotizacionNotificacionesListener {
         telefono: event.telefono,
         nombrePaquete: event.nombrePaquete,
         nombreDestino: event.nombreDestino,
+        nombreNoticia: event.nombreNoticia,
         cantidadPersonas: event.cantidadPersonas,
         mensaje: event.mensaje,
       });
@@ -53,6 +55,7 @@ export class CotizacionNotificacionesListener {
         respuesta: event.respuesta,
         nombrePaquete: event.nombrePaquete,
         nombreDestino: event.nombreDestino,
+        nombreNoticia: event.nombreNoticia,
       });
     } catch (error) {
       this.logger.error(

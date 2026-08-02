@@ -82,7 +82,7 @@ export class CloudinaryService {
    */
   async subirImagen(
     file: Express.Multer.File,
-    carpeta: 'destinos' | 'paquetes' | 'ofertas' | 'contenido',
+    carpeta: 'destinos' | 'paquetes' | 'ofertas' | 'contenido' | 'noticias',
   ): Promise<ImagenSubida> {
     this.validarArchivo(file);
 

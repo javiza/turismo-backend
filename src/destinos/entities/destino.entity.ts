@@ -48,8 +48,31 @@ export class Destino {
   @Column({ name: 'imagen_principal', type: 'text', nullable: true })
   imagenPrincipal?: string;
 
+  // Precio referencial que ingresa el admin a mano (ej. "Desde $120.000").
+  // No se calcula a partir de los paquetes: es independiente y opcional,
+  // pensado para mostrar un valor de entrada en la vitrina aunque el
+  // destino todavía no tenga paquetes cargados.
+  @Column('numeric', {
+    name: 'precio_desde',
+    precision: 12,
+    scale: 2,
+    nullable: true,
+    transformer: numericTransformer,
+  })
+  precioDesde?: number;
+
   @Column({ default: true })
   activo!: boolean;
+
+  // Rango en que el destino está disponible como servicio. Nullable
+  // porque los destinos creados antes de este cambio no lo tienen
+  // cargado; el formulario de creación del panel admin los exige de
+  // ahora en adelante (ver CreateDestinoDto).
+  @Column({ name: 'fecha_inicio', type: 'date', nullable: true })
+  fechaInicio?: string;
+
+  @Column({ name: 'fecha_fin', type: 'date', nullable: true })
+  fechaFin?: string;
 
   // search_vector es calculado por un trigger de Postgres (ver Script-26.sql,
   // función destino_search_trigger). No se mapea ni se toca desde la app.

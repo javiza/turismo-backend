@@ -9,6 +9,7 @@ import {
   IsUrl,
   IsArray,
   ArrayMaxSize,
+  IsDateString,
 } from 'class-validator';
 
 export class CreateDestinoDto {
@@ -31,6 +32,15 @@ export class CreateDestinoDto {
   @MaxLength(100)
   ciudad!: string;
 
+  // Rango en que el destino está disponible como servicio. Obligatorio
+  // al crear (igual que en paquetes); UpdateDestinoDto lo deja opcional
+  // automáticamente vía PartialType.
+  @IsDateString()
+  fechaInicio!: string;
+
+  @IsDateString()
+  fechaFin!: string;
+
   @IsOptional()
   @IsNumber()
   @Min(-90)
@@ -42,6 +52,13 @@ export class CreateDestinoDto {
   @Min(-180)
   @Max(180)
   longitud?: number;
+
+  // Precio referencial ("Desde $X") que el admin puede cargar o dejar
+  // vacío. No está atado a los paquetes del destino.
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  precioDesde?: number;
 
   @IsOptional()
   @IsUrl()

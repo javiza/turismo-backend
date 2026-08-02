@@ -131,6 +131,7 @@ export class EmailService {
     nombre: string;
     nombrePaquete?: string;
     nombreDestino?: string;
+    nombreNoticia?: string;
   }): Promise<void> {
     if (!params.email) return;
 
@@ -138,7 +139,9 @@ export class EmailService {
       ? ` para <strong>${params.nombrePaquete}</strong>`
       : params.nombreDestino
         ? ` sobre <strong>${params.nombreDestino}</strong>`
-        : '';
+        : params.nombreNoticia
+          ? ` sobre la noticia <strong>${params.nombreNoticia}</strong>`
+          : '';
 
     await this.send(
       params.email,
@@ -196,10 +199,12 @@ export class EmailService {
     telefono?: string;
     nombrePaquete?: string;
     nombreDestino?: string;
+    nombreNoticia?: string;
     cantidadPersonas?: number;
     mensaje?: string;
   }): Promise<void> {
-    const asuntoRef = params.nombrePaquete || params.nombreDestino;
+    const asuntoRef =
+      params.nombrePaquete || params.nombreDestino || params.nombreNoticia;
 
     await this.send(
       this.adminAddress,
@@ -210,6 +215,7 @@ export class EmailService {
        ${params.telefono ? `<p><strong>Teléfono:</strong> ${params.telefono}</p>` : ''}
        ${params.nombrePaquete ? `<p><strong>Paquete:</strong> ${params.nombrePaquete}</p>` : ''}
        ${params.nombreDestino ? `<p><strong>Destino:</strong> ${params.nombreDestino}</p>` : ''}
+       ${params.nombreNoticia ? `<p><strong>Noticia:</strong> ${params.nombreNoticia}</p>` : ''}
        ${params.cantidadPersonas ? `<p><strong>Personas:</strong> ${params.cantidadPersonas}</p>` : ''}
        <p><strong>Pregunta:</strong></p>
        <p>${params.mensaje || '(sin mensaje)'}</p>`,
@@ -223,6 +229,7 @@ export class EmailService {
     respuesta: string;
     nombrePaquete?: string;
     nombreDestino?: string;
+    nombreNoticia?: string;
   }): Promise<void> {
     if (!params.email) return;
 
@@ -230,7 +237,9 @@ export class EmailService {
       ? ` sobre <strong>${params.nombrePaquete}</strong>`
       : params.nombreDestino
         ? ` sobre <strong>${params.nombreDestino}</strong>`
-        : '';
+        : params.nombreNoticia
+          ? ` sobre la noticia <strong>${params.nombreNoticia}</strong>`
+          : '';
 
     await this.send(
       params.email,

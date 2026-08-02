@@ -20,6 +20,11 @@ export class CreateCotizacionDto {
   @IsPositive()
   destinoId?: number;
 
+  @IsOptional()
+  @IsInt()
+  @IsPositive()
+  noticiaId?: number;
+
   @IsString()
   @IsNotEmpty()
   @MaxLength(150)

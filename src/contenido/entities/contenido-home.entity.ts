@@ -24,8 +24,8 @@ export class ContenidoHome {
   // para distintos clientes sin tocar código ni redeploy: el admin de cada
   // cliente lo configura desde su propio panel, y el frontend lo consume
   // desde este mismo endpoint (título de pestaña, navbar, footer, etc.).
-@Column('text', { name: 'nombre_agencia', default: 'Tu Agencia de Viajes' })
-   nombreAgencia!: string;
+  @Column('text', { name: 'nombre_agencia', default: 'Tu Agencia de Viajes' })
+  nombreAgencia!: string;
 
   // URL del logo de la agencia (subido a Cloudinary desde el panel admin
   // o pegado como URL externa). Nullable: mientras no haya logo, el
@@ -51,6 +51,16 @@ export class ContenidoHome {
   // preseleccionada de sloganFontFamily.
   @Column('text', { name: 'slogan_font_url', nullable: true })
   sloganFontUrl!: string | null;
+
+  // Color (hex) de fondo general del sitio (reemplaza el degradado por
+  // defecto) y del navbar. Nullable: mientras el admin no elija uno, el
+  // frontend usa los tonos por defecto de la paleta (ver globals.css,
+  // --color-fondo-app / --color-navbar-app).
+  @Column('text', { name: 'color_fondo', nullable: true })
+  colorFondo!: string | null;
+
+  @Column('text', { name: 'color_navbar', nullable: true })
+  colorNavbar!: string | null;
 
   @Column('text')
   titulo!: string;

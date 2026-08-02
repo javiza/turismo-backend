@@ -8,10 +8,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ScheduleModule } from '@nestjs/schedule';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import * as Joi from 'joi';
-import {
-  ThrottlerModule,
-  ThrottlerGuard,
-} from '@nestjs/throttler';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 
 // Configuración
 import { getDatabaseConfig } from './config/database.config';
@@ -35,6 +32,8 @@ import { CategoriasModule } from './categorias/categorias.module';
 import { PaquetesModule } from './paquetes/paquetes.module';
 import { OfertasModule } from './ofertas/ofertas.module';
 import { ContenidoModule } from './contenido/contenido.module';
+import { NoticiasModule } from './noticias/noticias.module';
+import { SlidesModule } from './slides/slides.module';
 
 import { ReservasModule } from './reservas/reservas.module';
 import { CotizacionesModule } from './cotizaciones/cotizaciones.module';
@@ -60,72 +59,69 @@ import { AsistenteIaModule } from './asistente-ia/asistente-ia.module';
     /**
      * Variables de entorno
      */
-  ConfigModule.forRoot({
-  isGlobal: true,
-  cache: true,
-  expandVariables: true,
-  envFilePath: [
-    `.env.${process.env.NODE_ENV}`,
-    '.env',
-  ],
-  validationSchema: Joi.object({
-    NODE_ENV: Joi.string()
-      .valid('development', 'production', 'test')
-      .default('development'),
+    ConfigModule.forRoot({
+      isGlobal: true,
+      cache: true,
+      expandVariables: true,
+      envFilePath: [`.env.${process.env.NODE_ENV}`, '.env'],
+      validationSchema: Joi.object({
+        NODE_ENV: Joi.string()
+          .valid('development', 'production', 'test')
+          .default('development'),
 
-    PORT: Joi.number().default(3000),
+        PORT: Joi.number().default(3000),
 
-    DB_HOST: Joi.string().required(),
-    DB_PORT: Joi.number().required(),
-    DB_USER: Joi.string().required(),
-    DB_PASSWORD: Joi.string().required(),
-    DB_NAME: Joi.string().required(),
+        DB_HOST: Joi.string().required(),
+        DB_PORT: Joi.number().required(),
+        DB_USER: Joi.string().required(),
+        DB_PASSWORD: Joi.string().required(),
+        DB_NAME: Joi.string().required(),
 
-    JWT_SECRET: Joi.string().required(),
-    JWT_REFRESH_SECRET: Joi.string().required(),
-    JWT_ACCESS_EXPIRES: Joi.string().required(),
-    JWT_REFRESH_EXPIRES: Joi.string().required(),
+        JWT_SECRET: Joi.string().required(),
+        JWT_REFRESH_SECRET: Joi.string().required(),
+        JWT_ACCESS_EXPIRES: Joi.string().required(),
+        JWT_REFRESH_EXPIRES: Joi.string().required(),
 
-    JWT_CLIENTE_SECRET: Joi.string().required(),
-    JWT_CLIENTE_REFRESH_SECRET: Joi.string().required(),
-    JWT_CLIENTE_ACCESS_EXPIRES: Joi.string().required(),
-    JWT_CLIENTE_REFRESH_EXPIRES: Joi.string().required(),
+        JWT_CLIENTE_SECRET: Joi.string().required(),
+        JWT_CLIENTE_REFRESH_SECRET: Joi.string().required(),
+        JWT_CLIENTE_ACCESS_EXPIRES: Joi.string().required(),
+        JWT_CLIENTE_REFRESH_EXPIRES: Joi.string().required(),
 
-    SMTP_HOST: Joi.string().allow('').optional(),
-    SMTP_PORT: Joi.number().default(587),
-    SMTP_USER: Joi.string().allow('').optional(),
-    SMTP_PASSWORD: Joi.string().allow('').optional(),
-    SMTP_FROM: Joi.string().required(),
+        SMTP_HOST: Joi.string().allow('').optional(),
+        SMTP_PORT: Joi.number().default(587),
+        SMTP_USER: Joi.string().allow('').optional(),
+        SMTP_PASSWORD: Joi.string().allow('').optional(),
+        SMTP_FROM: Joi.string().required(),
 
-    ADMIN_NOTIFICATION_EMAIL: Joi.string().email().required(),
+        ADMIN_NOTIFICATION_EMAIL: Joi.string().email().required(),
 
-    WHATSAPP_TOKEN: Joi.string().allow('').optional(),
-    WHATSAPP_PHONE_NUMBER_ID: Joi.string().allow('').optional(),
-    WHATSAPP_ADMIN_NUMBER: Joi.string().allow('').optional(),
-    WHATSAPP_API_VERSION: Joi.string().allow('').optional(),
+        WHATSAPP_TOKEN: Joi.string().allow('').optional(),
+        WHATSAPP_PHONE_NUMBER_ID: Joi.string().allow('').optional(),
+        WHATSAPP_ADMIN_NUMBER: Joi.string().allow('').optional(),
+        WHATSAPP_API_VERSION: Joi.string().allow('').optional(),
 
-    SEED_ADMIN_EMAIL: Joi.string().email().required(),
-    SEED_ADMIN_PASSWORD: Joi.string().required(),
-    SEED_ADMIN_NOMBRE: Joi.string().required(),
+        SEED_ADMIN_EMAIL: Joi.string().email().required(),
+        SEED_ADMIN_PASSWORD: Joi.string().required(),
+        SEED_ADMIN_NOMBRE: Joi.string().required(),
 
-    // Redis (caché + BullMQ). REDIS_URL tiene prioridad si está presente
-    // (formato típico de Railway/Render: redis://user:pass@host:puerto).
-    REDIS_URL: Joi.string().uri().optional(),
-    REDIS_HOST: Joi.string().optional(),
-    REDIS_PORT: Joi.number().optional(),
-    REDIS_PASSWORD: Joi.string().allow('').optional(),
+        // Redis (caché + BullMQ). REDIS_URL tiene prioridad si está presente
+        // (formato típico de Railway/Render: redis://user:pass@host:puerto).
+        REDIS_URL: Joi.string().uri().optional(),
+        REDIS_HOST: Joi.string().optional(),
+        REDIS_PORT: Joi.number().optional(),
+        REDIS_PASSWORD: Joi.string().allow('').optional(),
 
-    // Cloudinary (subida de imágenes)
-    CLOUDINARY_CLOUD_NAME: Joi.string().allow('').optional(),
-    CLOUDINARY_API_KEY: Joi.string().allow('').optional(),
-    CLOUDINARY_API_SECRET: Joi.string().allow('').optional(),
+        // Cloudinary (subida de imágenes)
+        CLOUDINARY_CLOUD_NAME: Joi.string().allow('').optional(),
+        CLOUDINARY_API_KEY: Joi.string().allow('').optional(),
+        CLOUDINARY_API_SECRET: Joi.string().allow('').optional(),
 
-    // Logging estructurado
-    LOG_LEVEL: Joi.string()
-      .valid('fatal', 'error', 'warn', 'info', 'debug', 'trace')
-      .optional(),
-  }),
-}),
+        // Logging estructurado
+        LOG_LEVEL: Joi.string()
+          .valid('fatal', 'error', 'warn', 'info', 'debug', 'trace')
+          .optional(),
+      }),
+    }),
 
     /**
      * Cron Jobs
@@ -202,6 +198,8 @@ import { AsistenteIaModule } from './asistente-ia/asistente-ia.module';
     PaquetesModule,
     OfertasModule,
     ContenidoModule,
+    NoticiasModule,
+    SlidesModule,
 
     /**
      * Operación

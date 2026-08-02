@@ -1,4 +1,10 @@
-import { IsBoolean, IsOptional, IsString, IsNotEmpty, IsEnum } from 'class-validator';
+import {
+  IsBoolean,
+  IsOptional,
+  IsString,
+  IsNotEmpty,
+  IsEnum,
+} from 'class-validator';
 import { EstadoCotizacion } from '../entities/cotizacion.entity';
 
 /**

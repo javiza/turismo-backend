@@ -35,7 +35,17 @@ export class DestinosService {
     return this.cache.delByPrefix(CACHE_PREFIX);
   }
 
+  private validarFechas(fechaInicio: string, fechaFin: string) {
+    if (new Date(fechaFin) <= new Date(fechaInicio)) {
+      throw new BadRequestException(
+        'La fecha de fin debe ser posterior a la fecha de inicio',
+      );
+    }
+  }
+
   async create(dto: CreateDestinoDto): Promise<Destino> {
+    this.validarFechas(dto.fechaInicio, dto.fechaFin);
+
     const { imagenes, imagenPrincipal, ...resto } = dto;
 
     const destino = this.destinoRepository.create({
@@ -132,6 +142,13 @@ export class DestinosService {
 
   async update(id: number, dto: UpdateDestinoDto): Promise<Destino> {
     const destino = await this.findOne(id);
+
+    const fechaInicio = dto.fechaInicio ?? destino.fechaInicio;
+    const fechaFin = dto.fechaFin ?? destino.fechaFin;
+    if (fechaInicio && fechaFin) {
+      this.validarFechas(fechaInicio, fechaFin);
+    }
+
     Object.assign(destino, dto);
     const guardado = await this.destinoRepository.save(destino);
     await this.invalidarCache();

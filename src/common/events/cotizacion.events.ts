@@ -11,6 +11,7 @@ export class CotizacionCreadaEvent {
     public readonly mensaje: string | undefined,
     public readonly nombrePaquete: string | undefined,
     public readonly nombreDestino: string | undefined,
+    public readonly nombreNoticia: string | undefined,
   ) {}
 }
 
@@ -22,5 +23,6 @@ export class CotizacionRespondidaEvent {
     public readonly respuesta: string,
     public readonly nombrePaquete: string | undefined,
     public readonly nombreDestino: string | undefined,
+    public readonly nombreNoticia: string | undefined,
   ) {}
 }

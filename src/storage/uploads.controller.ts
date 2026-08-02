@@ -21,6 +21,7 @@ enum CarpetaUpload {
   paquetes = 'paquetes',
   ofertas = 'ofertas',
   contenido = 'contenido',
+  noticias = 'noticias',
 }
 
 /**
@@ -63,7 +64,8 @@ export class UploadsController {
   // de "image".
   @Post('fuentes')
   @ApiOperation({
-    summary: 'Sube un archivo de tipografía (TTF/OTF/WOFF/WOFF2) y devuelve su URL',
+    summary:
+      'Sube un archivo de tipografía (TTF/OTF/WOFF/WOFF2) y devuelve su URL',
   })
   @ApiConsumes('multipart/form-data')
   @UseInterceptors(

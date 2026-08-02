@@ -80,6 +80,22 @@ export class UpdateContenidoHomeDto {
   @MaxLength(1000)
   sloganFontUrl?: string;
 
+  // Color de fondo general del sitio y color del navbar. "" se usa para
+  // quitar la personalización y volver a los tonos por defecto.
+  @IsOptional()
+  @IsString()
+  @Matches(/^(#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}))?$/, {
+    message: 'colorFondo debe ser un color hexadecimal, ej: #f8fbff',
+  })
+  colorFondo?: string;
+
+  @IsOptional()
+  @IsString()
+  @Matches(/^(#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}))?$/, {
+    message: 'colorNavbar debe ser un color hexadecimal, ej: #f8fbff',
+  })
+  colorNavbar?: string;
+
   @IsOptional()
   @IsString()
   @MaxLength(300)
