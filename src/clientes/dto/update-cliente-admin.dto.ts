@@ -1,4 +1,11 @@
-import { IsOptional, IsString, MaxLength } from 'class-validator';
+import {
+  ArrayMaxSize,
+  IsArray,
+  IsEmail,
+  IsOptional,
+  IsString,
+  MaxLength,
+} from 'class-validator';
 
 /**
  * Edición de un cliente desde el panel admin: nombre, teléfono y RUT.
@@ -22,4 +29,18 @@ export class UpdateClienteAdminDto {
   @IsString()
   @MaxLength(20)
   rut?: string;
+
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(5)
+  @IsString({ each: true })
+  @MaxLength(50, { each: true })
+  telefonosAdicionales?: string[];
+
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(5)
+  @IsEmail({}, { each: true })
+  @MaxLength(150, { each: true })
+  correosAdicionales?: string[];
 }

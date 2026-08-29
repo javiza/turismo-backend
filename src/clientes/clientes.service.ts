@@ -15,6 +15,7 @@ import { hashToken, tokenMatches } from '../common/utils/token-hash';
 import { Cliente } from './entities/cliente.entity';
 import { RegistroClienteDto } from '../clientes-auth/dto/registro-cliente.dto';
 import { UpdateClienteAdminDto } from './dto/update-cliente-admin.dto';
+import { UpdatePerfilClienteDto } from '../clientes-auth/dto/update-perfil-cliente.dto';
 
 @Injectable()
 export class ClientesService {
@@ -39,6 +40,8 @@ export class ClientesService {
       email: dto.email,
       telefono: dto.telefono,
       rut: dto.rut,
+      telefonosAdicionales: dto.telefonosAdicionales ?? [],
+      correosAdicionales: dto.correosAdicionales ?? [],
       password,
       activo: true,
     });
@@ -97,9 +100,28 @@ export class ClientesService {
     return this.clienteRepository.save(cliente);
   }
 
-  /** Edición de datos por el admin (nombre/teléfono/RUT) — típicamente para completar el RUT de un cliente que se registró sin cargarlo. */
-  async actualizar(id: number, dto: UpdateClienteAdminDto): Promise<Cliente> {
+  /**
+   * Edición de datos por el cliente (perfil propio) o por el admin.
+   * El email es el usuario de login, así que si viene y cambia se
+   * valida que no choque con la cuenta de otro cliente antes de
+   * guardarlo.
+   */
+  async actualizar(
+    id: number,
+    dto: UpdateClienteAdminDto | UpdatePerfilClienteDto,
+  ): Promise<Cliente> {
     const cliente = await this.findOne(id);
+
+    const nuevoEmail = (dto as UpdatePerfilClienteDto).email;
+    if (nuevoEmail && nuevoEmail !== cliente.email) {
+      const existe = await this.clienteRepository.findOne({
+        where: { email: nuevoEmail },
+      });
+      if (existe) {
+        throw new ConflictException('Ya existe una cuenta con ese email');
+      }
+    }
+
     Object.assign(cliente, dto);
     return this.clienteRepository.save(cliente);
   }

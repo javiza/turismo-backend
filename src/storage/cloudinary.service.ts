@@ -7,7 +7,12 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { v2 as cloudinary, UploadApiResponse } from 'cloudinary';
 
-const TIPOS_PERMITIDOS = ['image/jpeg', 'image/png', 'image/webp', 'image/avif'];
+const TIPOS_PERMITIDOS = [
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'image/avif',
+];
 const TAMANO_MAXIMO_BYTES = 5 * 1024 * 1024; // 5 MB
 
 // Los navegadores no son consistentes con el mimetype de archivos de
@@ -82,7 +87,13 @@ export class CloudinaryService {
    */
   async subirImagen(
     file: Express.Multer.File,
-    carpeta: 'destinos' | 'paquetes' | 'ofertas' | 'contenido' | 'noticias',
+    carpeta:
+      | 'destinos'
+      | 'paquetes'
+      | 'ofertas'
+      | 'contenido'
+      | 'noticias'
+      | 'proveedores',
   ): Promise<ImagenSubida> {
     this.validarArchivo(file);
 
@@ -92,22 +103,26 @@ export class CloudinaryService {
       );
     }
 
-    const resultado = await new Promise<UploadApiResponse>((resolve, reject) => {
-      const stream = cloudinary.uploader.upload_stream(
-        {
-          folder: `turismo/${carpeta}`,
-          resource_type: 'image',
-          transformation: [{ quality: 'auto', fetch_format: 'auto' }],
-        },
-        (error, result) => {
-          if (error || !result) {
-            return reject(error ?? new Error('Cloudinary no devolvió resultado'));
-          }
-          resolve(result);
-        },
-      );
-      stream.end(file.buffer);
-    });
+    const resultado = await new Promise<UploadApiResponse>(
+      (resolve, reject) => {
+        const stream = cloudinary.uploader.upload_stream(
+          {
+            folder: `turismo/${carpeta}`,
+            resource_type: 'image',
+            transformation: [{ quality: 'auto', fetch_format: 'auto' }],
+          },
+          (error, result) => {
+            if (error || !result) {
+              return reject(
+                error ?? new Error('Cloudinary no devolvió resultado'),
+              );
+            }
+            resolve(result);
+          },
+        );
+        stream.end(file.buffer);
+      },
+    );
 
     return {
       url: resultado.secure_url,
@@ -122,7 +137,9 @@ export class CloudinaryService {
     if (!file) {
       throw new BadRequestException('No se envió ningún archivo');
     }
-    const extension = file.originalname.slice(file.originalname.lastIndexOf('.')).toLowerCase();
+    const extension = file.originalname
+      .slice(file.originalname.lastIndexOf('.'))
+      .toLowerCase();
     if (!EXTENSIONES_FUENTE_PERMITIDAS.includes(extension)) {
       throw new BadRequestException(
         `Tipo de archivo no permitido (${extension || 'sin extensión'}). Usa TTF, OTF, WOFF o WOFF2.`,
@@ -139,7 +156,9 @@ export class CloudinaryService {
    * transformación) y devuelve su URL. Se usa para que el admin pueda
    * cargar su propia tipografía para el slogan de la home.
    */
-  async subirFuente(file: Express.Multer.File): Promise<{ url: string; publicId: string }> {
+  async subirFuente(
+    file: Express.Multer.File,
+  ): Promise<{ url: string; publicId: string }> {
     this.validarArchivoFuente(file);
 
     if (!this.configured) {
@@ -148,29 +167,33 @@ export class CloudinaryService {
       );
     }
 
-    const resultado = await new Promise<UploadApiResponse>((resolve, reject) => {
-      const stream = cloudinary.uploader.upload_stream(
-        {
-          folder: 'turismo/contenido/fuentes',
-          resource_type: 'raw',
-          // Conserva el nombre original (con extensión) como public_id
-          // para que la URL resultante sirva directo como @font-face src,
-          // ya que Cloudinary por defecto no le pone extensión a los
-          // recursos "raw".
-          public_id: file.originalname.replace(/\s+/g, '_'),
-          use_filename: true,
-          unique_filename: true,
-          overwrite: false,
-        },
-        (error, result) => {
-          if (error || !result) {
-            return reject(error ?? new Error('Cloudinary no devolvió resultado'));
-          }
-          resolve(result);
-        },
-      );
-      stream.end(file.buffer);
-    });
+    const resultado = await new Promise<UploadApiResponse>(
+      (resolve, reject) => {
+        const stream = cloudinary.uploader.upload_stream(
+          {
+            folder: 'turismo/contenido/fuentes',
+            resource_type: 'raw',
+            // Conserva el nombre original (con extensión) como public_id
+            // para que la URL resultante sirva directo como @font-face src,
+            // ya que Cloudinary por defecto no le pone extensión a los
+            // recursos "raw".
+            public_id: file.originalname.replace(/\s+/g, '_'),
+            use_filename: true,
+            unique_filename: true,
+            overwrite: false,
+          },
+          (error, result) => {
+            if (error || !result) {
+              return reject(
+                error ?? new Error('Cloudinary no devolvió resultado'),
+              );
+            }
+            resolve(result);
+          },
+        );
+        stream.end(file.buffer);
+      },
+    );
 
     return { url: resultado.secure_url, publicId: resultado.public_id };
   }

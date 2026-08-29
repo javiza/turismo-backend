@@ -32,6 +32,16 @@ export class Cliente {
   @Column({ length: 50, nullable: true })
   telefono?: string;
 
+  // Teléfonos y correos de contacto adicionales al principal (el `email`
+  // sigue siendo el único que sirve para iniciar sesión, así que nunca
+  // se edita desde acá). Se guardan como arreglo simple porque no
+  // necesitan más metadata (tipo, verificación, etc.) por ahora.
+  @Column('jsonb', { name: 'telefonos_adicionales', default: () => "'[]'" })
+  telefonosAdicionales!: string[];
+
+  @Column('jsonb', { name: 'correos_adicionales', default: () => "'[]'" })
+  correosAdicionales!: string[];
+
   // RUT chileno (con o sin puntos/guión, tal como lo escriba el admin o
   // el propio cliente). Nullable porque el registro no lo pide todavía;
   // se completa después desde el panel admin o el perfil del cliente.

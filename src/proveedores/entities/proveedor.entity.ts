@@ -38,6 +38,20 @@ export class Proveedor {
   @Column('text')
   descripcion!: string;
 
+  @Column({ name: 'imagen_url', type: 'text', nullable: true })
+  imagenUrl?: string;
+
+  // Precio referencial opcional que el proveedor puede dejar para que el
+  // admin tenga una idea de rango de precios antes de contactarlo.
+  @Column({
+    name: 'precio_referencial',
+    type: 'numeric',
+    precision: 12,
+    scale: 2,
+    nullable: true,
+  })
+  precioReferencial?: number;
+
   @Column({ default: false })
   leido!: boolean;
 

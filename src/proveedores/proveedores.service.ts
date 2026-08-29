@@ -40,6 +40,7 @@ export class ProveedoresService {
       telefono: guardado.telefono,
       direccion: guardado.direccion,
       descripcion: guardado.descripcion,
+      precioReferencial: guardado.precioReferencial,
     });
 
     void this.whatsappService.notificarProveedorNuevo({

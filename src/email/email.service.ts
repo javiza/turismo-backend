@@ -280,6 +280,7 @@ export class EmailService {
     telefono: string;
     direccion?: string;
     descripcion: string;
+    precioReferencial?: number;
   }): Promise<void> {
     await this.send(
       this.adminAddress,
@@ -291,6 +292,11 @@ export class EmailService {
        <p><strong>Correo:</strong> ${params.correo}</p>
        <p><strong>Teléfono:</strong> ${params.telefono}</p>
        ${params.direccion ? `<p><strong>Dirección:</strong> ${params.direccion}</p>` : ''}
+       ${
+         params.precioReferencial !== undefined
+           ? `<p><strong>Precio referencial:</strong> $${params.precioReferencial}</p>`
+           : ''
+       }
        <p><strong>Descripción del negocio:</strong></p>
        <p>${params.descripcion}</p>`,
     );

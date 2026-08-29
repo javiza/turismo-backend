@@ -1,4 +1,6 @@
 import {
+  ArrayMaxSize,
+  IsArray,
   IsEmail,
   IsOptional,
   IsString,
@@ -28,4 +30,20 @@ export class RegistroClienteDto {
   @IsString()
   @MaxLength(20)
   rut?: string;
+
+  // Contactos adicionales al principal (ver Cliente entity). Opcionales:
+  // el registro sigue funcionando igual sin ellos.
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(5)
+  @IsString({ each: true })
+  @MaxLength(50, { each: true })
+  telefonosAdicionales?: string[];
+
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(5)
+  @IsEmail({}, { each: true })
+  @MaxLength(150, { each: true })
+  correosAdicionales?: string[];
 }

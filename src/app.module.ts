@@ -38,6 +38,7 @@ import { SlidesModule } from './slides/slides.module';
 import { ReservasModule } from './reservas/reservas.module';
 import { CotizacionesModule } from './cotizaciones/cotizaciones.module';
 import { FinanzasModule } from './finanzas/finanzas.module';
+import { PagosModule } from './pagos/pagos.module';
 
 import { MensajesModule } from './mensajes/mensajes.module';
 import { EmailModule } from './email/email.module';
@@ -99,6 +100,21 @@ import { AsistenteIaModule } from './asistente-ia/asistente-ia.module';
         WHATSAPP_PHONE_NUMBER_ID: Joi.string().allow('').optional(),
         WHATSAPP_ADMIN_NUMBER: Joi.string().allow('').optional(),
         WHATSAPP_API_VERSION: Joi.string().allow('').optional(),
+
+        // Transbank Webpay Plus (pago con tarjeta). Si se dejan vacías en
+        // desarrollo, PagosService usa las credenciales de integración
+        // públicas de Transbank (ambiente de pruebas). En producción son
+        // obligatorias — ver validación adicional en PagosService.
+        TRANSBANK_COMMERCE_CODE: Joi.string().allow('').optional(),
+        TRANSBANK_API_KEY: Joi.string().allow('').optional(),
+        TRANSBANK_ENVIRONMENT: Joi.string()
+          .valid('integration', 'production')
+          .default('integration'),
+        // URL pública por la que Transbank puede alcanzar este backend
+        // para redirigir al cliente de vuelta tras pagar (returnUrl). En
+        // desarrollo con localhost no importa; en producción debe ser la
+        // URL real y accesible desde internet del backend.
+        BACKEND_PUBLIC_URL: Joi.string().allow('').optional(),
 
         SEED_ADMIN_EMAIL: Joi.string().email().required(),
         SEED_ADMIN_PASSWORD: Joi.string().required(),
@@ -207,6 +223,7 @@ import { AsistenteIaModule } from './asistente-ia/asistente-ia.module';
     ReservasModule,
     CotizacionesModule,
     FinanzasModule,
+    PagosModule,
 
     /**
      * Comunicación

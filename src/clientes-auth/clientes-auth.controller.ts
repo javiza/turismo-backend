@@ -113,7 +113,11 @@ export class ClientesAuthController {
   @ApiBearerAuth('JWT-cliente')
   @UseGuards(JwtClienteAuthGuard)
   @ApiOperation({
-    summary: 'Edita nombre/teléfono/RUT del cliente autenticado',
+    summary: 'Edita nombre/email/teléfono/RUT del cliente autenticado',
+  })
+  @ApiResponse({
+    status: 409,
+    description: 'Ya existe una cuenta con ese email',
   })
   actualizarPerfil(
     @Body() dto: UpdatePerfilClienteDto,

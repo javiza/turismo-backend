@@ -10,6 +10,7 @@ import {
 import { Paquete } from '../../paquetes/entities/paquete.entity';
 import { Cliente } from '../../clientes/entities/cliente.entity';
 import { numericTransformer } from '../../common/transformers/numeric.transformer';
+import { MetodoPago } from '../../finanzas/entities/movimiento-financiero.entity';
 
 export enum EstadoReserva {
   PENDIENTE = 'PENDIENTE',
@@ -73,4 +74,15 @@ export class Reserva {
 
   @CreateDateColumn({ name: 'fecha_reserva' })
   fechaReserva!: Date;
+
+  // Se llenan solos cuando PagosService.confirmar() recibe un pago Webpay
+  // AUTORIZADO (ver src/pagos) — nunca los escribe el DTO directamente.
+  // Quedan null mientras la reserva no se haya pagado online con tarjeta
+  // (p. ej. si se confirma "a mano" desde el panel admin sin pasar por
+  // Webpay, algo que sigue siendo válido y no requiere estos campos).
+  @Column({ name: 'metodo_pago', type: 'varchar', length: 30, nullable: true })
+  metodoPago?: MetodoPago | null;
+
+  @Column({ name: 'pagado_en', type: 'timestamptz', nullable: true })
+  pagadoEn?: Date | null;
 }
