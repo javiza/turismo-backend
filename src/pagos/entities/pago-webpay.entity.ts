@@ -55,7 +55,7 @@ export class PagoWebpay {
   // Token que entrega Transbank al crear la transacción; es el mismo
   // que vuelve en el POST de retorno (token_ws) y con el que se hace
   // el commit(). Null hasta que create() responde.
-  @Column({ length: 64, nullable: true })
+  @Column({ type: 'varchar', length: 64, nullable: true })
   token?: string | null;
 
   @Column('numeric', {
@@ -72,20 +72,20 @@ export class PagoWebpay {
   })
   estado!: EstadoPagoWebpay;
 
-  @Column({ name: 'codigo_autorizacion', length: 20, nullable: true })
+  @Column({ name: 'codigo_autorizacion', type: 'varchar', length: 20, nullable: true })
   codigoAutorizacion?: string | null;
 
   @Column({ name: 'codigo_respuesta', type: 'int', nullable: true })
   codigoRespuesta?: number | null;
 
   // payment_type_code de Transbank (ej. "VD" débito, "VN" crédito normal).
-  @Column({ name: 'tipo_pago', length: 5, nullable: true })
+  @Column({ name: 'tipo_pago', type: 'varchar', length: 5, nullable: true })
   tipoPago?: string | null;
 
   @Column({ name: 'cuotas', type: 'int', nullable: true })
   cuotas?: number | null;
 
-  @Column({ name: 'ultimos_digitos_tarjeta', length: 4, nullable: true })
+  @Column({ name: 'ultimos_digitos_tarjeta', type: 'varchar', length: 4, nullable: true })
   ultimosDigitosTarjeta?: string | null;
 
   @Column({ name: 'fecha_transaccion', type: 'timestamptz', nullable: true })

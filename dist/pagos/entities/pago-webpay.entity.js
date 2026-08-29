@@ -61,7 +61,7 @@ __decorate([
     __metadata("design:type", String)
 ], PagoWebpay.prototype, "sessionId", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ length: 64, nullable: true }),
+    (0, typeorm_1.Column)({ type: 'varchar', length: 64, nullable: true }),
     __metadata("design:type", Object)
 ], PagoWebpay.prototype, "token", void 0);
 __decorate([
@@ -81,7 +81,7 @@ __decorate([
     __metadata("design:type", String)
 ], PagoWebpay.prototype, "estado", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ name: 'codigo_autorizacion', length: 20, nullable: true }),
+    (0, typeorm_1.Column)({ name: 'codigo_autorizacion', type: 'varchar', length: 20, nullable: true }),
     __metadata("design:type", Object)
 ], PagoWebpay.prototype, "codigoAutorizacion", void 0);
 __decorate([
@@ -89,7 +89,7 @@ __decorate([
     __metadata("design:type", Object)
 ], PagoWebpay.prototype, "codigoRespuesta", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ name: 'tipo_pago', length: 5, nullable: true }),
+    (0, typeorm_1.Column)({ name: 'tipo_pago', type: 'varchar', length: 5, nullable: true }),
     __metadata("design:type", Object)
 ], PagoWebpay.prototype, "tipoPago", void 0);
 __decorate([
@@ -97,7 +97,7 @@ __decorate([
     __metadata("design:type", Object)
 ], PagoWebpay.prototype, "cuotas", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ name: 'ultimos_digitos_tarjeta', length: 4, nullable: true }),
+    (0, typeorm_1.Column)({ name: 'ultimos_digitos_tarjeta', type: 'varchar', length: 4, nullable: true }),
     __metadata("design:type", Object)
 ], PagoWebpay.prototype, "ultimosDigitosTarjeta", void 0);
 __decorate([
