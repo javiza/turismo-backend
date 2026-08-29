@@ -18,13 +18,14 @@
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
-    "seed": "ts-node -r tsconfig-paths/register src/database/seed.ts",
+  "seed": "ts-node -r tsconfig-paths/register src/seed.ts",
     "typeorm": "typeorm-ts-node-commonjs",
     "reset-admin-password": "ts-node -r tsconfig-paths/register src/database/reset-admin-password.ts",
     "migration:generate": "npm run typeorm -- migration:generate",
     "migration:create": "npm run typeorm -- migration:create",
     "migration:run": "npm run typeorm -- migration:run -d src/database/data-source.ts",
     "migration:revert": "npm run typeorm -- migration:revert -d src/database/data-source.ts"
+    
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.32.1",
