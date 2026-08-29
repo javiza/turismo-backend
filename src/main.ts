@@ -147,9 +147,6 @@ async function bootstrap() {
 
   const port = configService.get<number>('PORT') ?? 3000;
   await app.listen(port, '0.0.0.0');
-
- 
-
   console.log('==========================================');
   console.log('🚀 Tourism Backend iniciado correctamente');
   console.log(`🌐 API: http://localhost:${port}/api/v1`);
