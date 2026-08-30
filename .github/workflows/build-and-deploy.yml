@@ -1,0 +1,45 @@
+name: Build backend y publicar a rama de deploy
+
+# Compila el backend en el runner de GitHub (con memoria de sobra) cada vez
+# que hay un push a main, y publica el resultado (dist/) en la rama
+# "render-deploy". Render está configurado para desplegar esa rama, y ahí
+# ya no necesita compilar nada — solo instalar dependencias y arrancar.
+# Esto existe porque el plan gratuito de Render (512 MB RAM) no alcanza
+# para correr "nest build" en este proyecto (necesita ~1.6 GB).
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Clonar repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configurar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: "npm"
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Compilar
+        run: npm run build
+
+      - name: Publicar dist en la rama render-deploy
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -B render-deploy
+          git add -f dist
+          git commit -m "build: dist actualizado desde ${GITHUB_SHA}" || echo "sin cambios en dist"
+          git push -f origin render-deploy
