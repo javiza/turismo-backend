@@ -12,6 +12,7 @@ export declare class UpdateContenidoHomeDto {
     sloganFontUrl?: string;
     colorFondo?: string;
     colorNavbar?: string;
+    colorFooter?: string;
     titulo?: string;
     subtitulo?: string;
     presentacion?: string;

@@ -49,6 +49,7 @@ class UpdateContenidoHomeDto {
     sloganFontUrl;
     colorFondo;
     colorNavbar;
+    colorFooter;
     titulo;
     subtitulo;
     presentacion;
@@ -115,6 +116,14 @@ __decorate([
     }),
     __metadata("design:type", String)
 ], UpdateContenidoHomeDto.prototype, "colorNavbar", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.Matches)(/^(#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}))?$/, {
+        message: 'colorFooter debe ser un color hexadecimal, ej: #f8fbff',
+    }),
+    __metadata("design:type", String)
+], UpdateContenidoHomeDto.prototype, "colorFooter", void 0);
 __decorate([
     (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsString)(),

@@ -20,6 +20,7 @@ let ContenidoHome = class ContenidoHome {
     sloganFontUrl;
     colorFondo;
     colorNavbar;
+    colorFooter;
     titulo;
     subtitulo;
     presentacion;
@@ -69,6 +70,10 @@ __decorate([
     (0, typeorm_1.Column)('text', { name: 'color_navbar', nullable: true }),
     __metadata("design:type", Object)
 ], ContenidoHome.prototype, "colorNavbar", void 0);
+__decorate([
+    (0, typeorm_1.Column)('text', { name: 'color_footer', nullable: true }),
+    __metadata("design:type", Object)
+], ContenidoHome.prototype, "colorFooter", void 0);
 __decorate([
     (0, typeorm_1.Column)('text'),
     __metadata("design:type", String)

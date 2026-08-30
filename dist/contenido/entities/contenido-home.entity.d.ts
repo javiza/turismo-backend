@@ -12,6 +12,7 @@ export declare class ContenidoHome {
     sloganFontUrl: string | null;
     colorFondo: string | null;
     colorNavbar: string | null;
+    colorFooter: string | null;
     titulo: string;
     subtitulo: string;
     presentacion: string;
