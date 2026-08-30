@@ -62,6 +62,9 @@ export class ContenidoHome {
   @Column('text', { name: 'color_navbar', nullable: true })
   colorNavbar!: string | null;
 
+  @Column('text', { name: 'color_footer', nullable: true })
+  colorFooter!: string | null;
+
   @Column('text')
   titulo!: string;
 

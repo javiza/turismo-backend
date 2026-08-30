@@ -37,6 +37,7 @@ export class ContenidoService {
       sloganFontUrl: null,
       colorFondo: null,
       colorNavbar: null,
+      colorFooter: null,
       titulo: 'Programa tus vacaciones con nosotros',
       subtitulo:
         'Arma tu próximo viaje con destinos, paquetes y ofertas curadas por nuestro equipo — todo reservable en minutos.',

@@ -98,6 +98,13 @@ export class UpdateContenidoHomeDto {
 
   @IsOptional()
   @IsString()
+  @Matches(/^(#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}))?$/, {
+    message: 'colorFooter debe ser un color hexadecimal, ej: #f8fbff',
+  })
+  colorFooter?: string;
+
+  @IsOptional()
+  @IsString()
   @MaxLength(300)
   titulo?: string;
 
