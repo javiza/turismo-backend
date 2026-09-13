@@ -78,6 +78,7 @@ const analytics_module_1 = require("./analytics/analytics.module");
 const auditoria_module_1 = require("./auditoria/auditoria.module");
 const visitas_module_1 = require("./visitas/visitas.module");
 const asistente_ia_module_1 = require("./asistente-ia/asistente-ia.module");
+const configuracion_module_1 = require("./configuracion/configuracion.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -123,6 +124,9 @@ exports.AppModule = AppModule = __decorate([
                         .valid('integration', 'production')
                         .default('integration'),
                     BACKEND_PUBLIC_URL: Joi.string().allow('').optional(),
+                    CONFIG_ENCRYPTION_KEY: Joi.string().min(16).optional(),
+                    MERCADOPAGO_ACCESS_TOKEN: Joi.string().allow('').optional(),
+                    MERCADOPAGO_PUBLIC_KEY: Joi.string().allow('').optional(),
                     SEED_ADMIN_EMAIL: Joi.string().email().required(),
                     SEED_ADMIN_PASSWORD: Joi.string().required(),
                     SEED_ADMIN_NOMBRE: Joi.string().required(),
@@ -175,6 +179,7 @@ exports.AppModule = AppModule = __decorate([
             email_module_1.EmailModule,
             whatsapp_module_1.WhatsappModule,
             proveedores_module_1.ProveedoresModule,
+            configuracion_module_1.ConfiguracionModule,
             asistente_ia_module_1.AsistenteIaModule,
             analytics_module_1.AnalyticsModule,
             auditoria_module_1.AuditoriaModule,

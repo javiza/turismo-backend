@@ -1,9 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 
 import { WHATSAPP_QUEUE, WhatsappJobData } from './whatsapp.queue';
+import { ConfiguracionService } from '../configuracion/configuracion.service';
 
 /**
  * Envío de mensajes de WhatsApp vía la API oficial de WhatsApp Business
@@ -25,35 +25,34 @@ import { WHATSAPP_QUEUE, WhatsappJobData } from './whatsapp.queue';
 @Injectable()
 export class WhatsappService {
   private readonly logger = new Logger(WhatsappService.name);
-  private readonly apiUrl: string | null;
-  private readonly token: string | null;
-  private readonly adminNumber: string | null;
 
   constructor(
-    private readonly config: ConfigService,
+    private readonly configuracion: ConfiguracionService,
     @InjectQueue(WHATSAPP_QUEUE) private readonly queue: Queue<WhatsappJobData>,
-  ) {
-    const token = this.config.get<string>('WHATSAPP_TOKEN');
-    const phoneNumberId = this.config.get<string>('WHATSAPP_PHONE_NUMBER_ID');
-    const adminNumber = this.config.get<string>('WHATSAPP_ADMIN_NUMBER');
-    const apiVersion =
-      this.config.get<string>('WHATSAPP_API_VERSION') ?? 'v20.0';
+  ) {}
 
-    if (!token || !phoneNumberId || !adminNumber) {
+  /** Lee la config vigente (panel admin primero, .env como respaldo) en cada envío. */
+  private async getConfig(): Promise<{
+    apiUrl: string | null;
+    token: string | null;
+    adminNumber: string | null;
+  }> {
+    const cfg = await this.configuracion.obtenerWhatsapp();
+
+    if (!cfg.token || !cfg.phoneNumberId || !cfg.adminNumber) {
       this.logger.warn(
-        'WhatsApp Business API no configurada (faltan WHATSAPP_TOKEN/' +
-          'WHATSAPP_PHONE_NUMBER_ID/WHATSAPP_ADMIN_NUMBER). Los mensajes ' +
-          'se registrarán en el log en vez de enviarse.',
+        'WhatsApp Business API no configurada (falta token/phoneNumberId/' +
+          'adminNumber, ni en el panel admin ni en .env). Los mensajes se ' +
+          'registrarán en el log en vez de enviarse.',
       );
-      this.apiUrl = null;
-      this.token = null;
-      this.adminNumber = null;
-      return;
+      return { apiUrl: null, token: null, adminNumber: cfg.adminNumber || null };
     }
 
-    this.apiUrl = `https://graph.facebook.com/${apiVersion}/${phoneNumberId}/messages`;
-    this.token = token;
-    this.adminNumber = adminNumber;
+    return {
+      apiUrl: `https://graph.facebook.com/${cfg.apiVersion}/${cfg.phoneNumberId}/messages`,
+      token: cfg.token,
+      adminNumber: cfg.adminNumber,
+    };
   }
 
   /** Encola el mensaje para envío en segundo plano. */
@@ -75,15 +74,17 @@ export class WhatsappService {
    * worker de la cola 'whatsapp') — nunca el resto del código de negocio.
    */
   async enviarTextoImmediate(to: string, texto: string): Promise<void> {
-    if (!this.apiUrl || !this.token) {
+    const { apiUrl, token } = await this.getConfig();
+
+    if (!apiUrl || !token) {
       this.logger.log(`[WHATSAPP SIMULADO] para=${to} texto="${texto}"`);
       return;
     }
 
-    const res = await fetch(this.apiUrl, {
+    const res = await fetch(apiUrl, {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${this.token}`,
+        Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
@@ -108,7 +109,9 @@ export class WhatsappService {
     telefono: string;
     correo: string;
   }): Promise<void> {
-    if (!this.adminNumber) {
+    const { adminNumber } = await this.getConfig();
+
+    if (!adminNumber) {
       this.logger.log(
         `[WHATSAPP SIMULADO] Proveedor nuevo: ${params.nombreNegocio}`,
       );
@@ -124,6 +127,6 @@ export class WhatsappService {
       `Correo: ${params.correo}\n` +
       `Revisa el detalle completo en el panel admin.`;
 
-    await this.enviarTexto(this.adminNumber, texto);
+    await this.enviarTexto(adminNumber, texto);
   }
 }

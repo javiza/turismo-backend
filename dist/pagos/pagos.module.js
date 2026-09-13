@@ -13,12 +13,13 @@ const pagos_service_1 = require("./pagos.service");
 const pagos_controller_1 = require("./pagos.controller");
 const pago_webpay_entity_1 = require("./entities/pago-webpay.entity");
 const reserva_entity_1 = require("../reservas/entities/reserva.entity");
+const configuracion_module_1 = require("../configuracion/configuracion.module");
 let PagosModule = class PagosModule {
 };
 exports.PagosModule = PagosModule;
 exports.PagosModule = PagosModule = __decorate([
     (0, common_1.Module)({
-        imports: [typeorm_1.TypeOrmModule.forFeature([pago_webpay_entity_1.PagoWebpay, reserva_entity_1.Reserva])],
+        imports: [typeorm_1.TypeOrmModule.forFeature([pago_webpay_entity_1.PagoWebpay, reserva_entity_1.Reserva]), configuracion_module_1.ConfiguracionModule],
         controllers: [pagos_controller_1.PagosController],
         providers: [pagos_service_1.PagosService],
         exports: [pagos_service_1.PagosService],

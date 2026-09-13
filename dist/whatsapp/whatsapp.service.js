@@ -15,36 +15,31 @@ var WhatsappService_1;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.WhatsappService = void 0;
 const common_1 = require("@nestjs/common");
-const config_1 = require("@nestjs/config");
 const bullmq_1 = require("@nestjs/bullmq");
 const bullmq_2 = require("bullmq");
 const whatsapp_queue_1 = require("./whatsapp.queue");
+const configuracion_service_1 = require("../configuracion/configuracion.service");
 let WhatsappService = WhatsappService_1 = class WhatsappService {
-    config;
+    configuracion;
     queue;
     logger = new common_1.Logger(WhatsappService_1.name);
-    apiUrl;
-    token;
-    adminNumber;
-    constructor(config, queue) {
-        this.config = config;
+    constructor(configuracion, queue) {
+        this.configuracion = configuracion;
         this.queue = queue;
-        const token = this.config.get('WHATSAPP_TOKEN');
-        const phoneNumberId = this.config.get('WHATSAPP_PHONE_NUMBER_ID');
-        const adminNumber = this.config.get('WHATSAPP_ADMIN_NUMBER');
-        const apiVersion = this.config.get('WHATSAPP_API_VERSION') ?? 'v20.0';
-        if (!token || !phoneNumberId || !adminNumber) {
-            this.logger.warn('WhatsApp Business API no configurada (faltan WHATSAPP_TOKEN/' +
-                'WHATSAPP_PHONE_NUMBER_ID/WHATSAPP_ADMIN_NUMBER). Los mensajes ' +
-                'se registrarán en el log en vez de enviarse.');
-            this.apiUrl = null;
-            this.token = null;
-            this.adminNumber = null;
-            return;
+    }
+    async getConfig() {
+        const cfg = await this.configuracion.obtenerWhatsapp();
+        if (!cfg.token || !cfg.phoneNumberId || !cfg.adminNumber) {
+            this.logger.warn('WhatsApp Business API no configurada (falta token/phoneNumberId/' +
+                'adminNumber, ni en el panel admin ni en .env). Los mensajes se ' +
+                'registrarán en el log en vez de enviarse.');
+            return { apiUrl: null, token: null, adminNumber: cfg.adminNumber || null };
         }
-        this.apiUrl = `https://graph.facebook.com/${apiVersion}/${phoneNumberId}/messages`;
-        this.token = token;
-        this.adminNumber = adminNumber;
+        return {
+            apiUrl: `https://graph.facebook.com/${cfg.apiVersion}/${cfg.phoneNumberId}/messages`,
+            token: cfg.token,
+            adminNumber: cfg.adminNumber,
+        };
     }
     async enviarTexto(to, texto) {
         await this.queue.add('send', { to, texto }, {
@@ -55,14 +50,15 @@ let WhatsappService = WhatsappService_1 = class WhatsappService {
         });
     }
     async enviarTextoImmediate(to, texto) {
-        if (!this.apiUrl || !this.token) {
+        const { apiUrl, token } = await this.getConfig();
+        if (!apiUrl || !token) {
             this.logger.log(`[WHATSAPP SIMULADO] para=${to} texto="${texto}"`);
             return;
         }
-        const res = await fetch(this.apiUrl, {
+        const res = await fetch(apiUrl, {
             method: 'POST',
             headers: {
-                Authorization: `Bearer ${this.token}`,
+                Authorization: `Bearer ${token}`,
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
@@ -78,7 +74,8 @@ let WhatsappService = WhatsappService_1 = class WhatsappService {
         }
     }
     async notificarProveedorNuevo(params) {
-        if (!this.adminNumber) {
+        const { adminNumber } = await this.getConfig();
+        if (!adminNumber) {
             this.logger.log(`[WHATSAPP SIMULADO] Proveedor nuevo: ${params.nombreNegocio}`);
             return;
         }
@@ -89,14 +86,14 @@ let WhatsappService = WhatsappService_1 = class WhatsappService {
             `Teléfono: ${params.telefono}\n` +
             `Correo: ${params.correo}\n` +
             `Revisa el detalle completo en el panel admin.`;
-        await this.enviarTexto(this.adminNumber, texto);
+        await this.enviarTexto(adminNumber, texto);
     }
 };
 exports.WhatsappService = WhatsappService;
 exports.WhatsappService = WhatsappService = WhatsappService_1 = __decorate([
     (0, common_1.Injectable)(),
     __param(1, (0, bullmq_1.InjectQueue)(whatsapp_queue_1.WHATSAPP_QUEUE)),
-    __metadata("design:paramtypes", [config_1.ConfigService,
+    __metadata("design:paramtypes", [configuracion_service_1.ConfiguracionService,
         bullmq_2.Queue])
 ], WhatsappService);
 //# sourceMappingURL=whatsapp.service.js.map

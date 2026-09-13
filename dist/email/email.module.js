@@ -12,12 +12,13 @@ const bullmq_1 = require("@nestjs/bullmq");
 const email_service_1 = require("./email.service");
 const email_processor_1 = require("./email.processor");
 const email_queue_1 = require("./email.queue");
+const configuracion_module_1 = require("../configuracion/configuracion.module");
 let EmailModule = class EmailModule {
 };
 exports.EmailModule = EmailModule;
 exports.EmailModule = EmailModule = __decorate([
     (0, common_1.Module)({
-        imports: [bullmq_1.BullModule.registerQueue({ name: email_queue_1.EMAIL_QUEUE })],
+        imports: [bullmq_1.BullModule.registerQueue({ name: email_queue_1.EMAIL_QUEUE }), configuracion_module_1.ConfiguracionModule],
         providers: [email_service_1.EmailService, email_processor_1.EmailProcessor],
         exports: [email_service_1.EmailService],
     })

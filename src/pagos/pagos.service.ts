@@ -21,6 +21,7 @@ import {
 import { PagoWebpay, EstadoPagoWebpay } from './entities/pago-webpay.entity';
 import { Reserva, EstadoReserva } from '../reservas/entities/reserva.entity';
 import { MetodoPago } from '../finanzas/entities/movimiento-financiero.entity';
+import { ConfiguracionService } from '../configuracion/configuracion.service';
 
 interface ResultadoRetornoWebpay {
   reservaId: number;
@@ -46,23 +47,17 @@ interface ResultadoRetornoWebpay {
 @Injectable()
 export class PagosService {
   private readonly logger = new Logger(PagosService.name);
-  private readonly transaction: InstanceType<typeof WebpayPlus.Transaction>;
-  private readonly esProduccion: boolean;
   private readonly backendUrl: string;
   private readonly frontendUrl: string;
 
   constructor(
     private readonly config: ConfigService,
+    private readonly configuracion: ConfiguracionService,
     @InjectRepository(PagoWebpay)
     private readonly pagoRepository: Repository<PagoWebpay>,
     @InjectRepository(Reserva)
     private readonly reservaRepository: Repository<Reserva>,
   ) {
-    const commerceCode = this.config.get<string>('TRANSBANK_COMMERCE_CODE');
-    const apiKey = this.config.get<string>('TRANSBANK_API_KEY');
-    this.esProduccion =
-      this.config.get<string>('TRANSBANK_ENVIRONMENT') === 'production';
-
     this.backendUrl = (
       this.config.get<string>('BACKEND_PUBLIC_URL') ??
       `http://localhost:${this.config.get<string>('PORT') ?? '3000'}`
@@ -70,35 +65,48 @@ export class PagosService {
     this.frontendUrl = (
       this.config.get<string>('FRONTEND_URL') ?? 'http://localhost:5173'
     ).replace(/\/+$/, '');
+  }
 
-    if (this.esProduccion) {
-      if (!commerceCode || !apiKey) {
+  /**
+   * Arma la transacción de Webpay leyendo SIEMPRE la config vigente
+   * (panel admin primero, .env como respaldo) — así activar modo
+   * producción con credenciales reales desde el panel aplica de
+   * inmediato, sin redeploy.
+   */
+  private async getTransaction(): Promise<InstanceType<typeof WebpayPlus.Transaction>> {
+    const cfg = await this.configuracion.obtenerTransbank();
+    const esProduccion = cfg.environment === 'production';
+
+    if (esProduccion) {
+      if (!cfg.commerceCode || !cfg.apiKey) {
         throw new Error(
-          'TRANSBANK_ENVIRONMENT=production requiere TRANSBANK_COMMERCE_CODE ' +
-            'y TRANSBANK_API_KEY (credenciales reales entregadas por Transbank ' +
-            'tras el proceso de afiliación/certificación de tu comercio).',
+          'Transbank en modo producción requiere código de comercio y API ' +
+            'key reales (configúralos en el panel admin → Configuración → ' +
+            'Transbank, con las credenciales que te entrega Transbank tras ' +
+            'la afiliación/certificación de tu comercio).',
         );
       }
-      this.transaction = new WebpayPlus.Transaction(
-        new Options(commerceCode, apiKey, Environment.Production),
-      );
-      this.logger.log('Webpay Plus configurado en modo PRODUCCIÓN.');
-    } else {
-      this.transaction =
-        commerceCode && apiKey
-          ? new WebpayPlus.Transaction(
-              new Options(commerceCode, apiKey, Environment.Integration),
-            )
-          : WebpayPlus.Transaction.buildForIntegration(
-              IntegrationCommerceCodes.WEBPAY_PLUS,
-              IntegrationApiKeys.WEBPAY,
-            );
-      this.logger.warn(
-        'Webpay Plus en modo INTEGRACIÓN (pruebas) — no se mueve dinero ' +
-          'real. Configura TRANSBANK_ENVIRONMENT=production con credenciales ' +
-          'reales antes de salir a producción.',
+      return new WebpayPlus.Transaction(
+        new Options(cfg.commerceCode, cfg.apiKey, Environment.Production),
       );
     }
+
+    if (cfg.commerceCode && cfg.apiKey) {
+      return new WebpayPlus.Transaction(
+        new Options(cfg.commerceCode, cfg.apiKey, Environment.Integration),
+      );
+    }
+
+    this.logger.warn(
+      'Webpay Plus en modo INTEGRACIÓN (pruebas, credenciales públicas) — ' +
+        'no se mueve dinero real. Configura credenciales reales y ambiente ' +
+        '"production" desde el panel admin → Configuración → Transbank ' +
+        'antes de salir a producción.',
+    );
+    return WebpayPlus.Transaction.buildForIntegration(
+      IntegrationCommerceCodes.WEBPAY_PLUS,
+      IntegrationApiKeys.WEBPAY,
+    );
   }
 
   /**
@@ -138,7 +146,8 @@ export class PagosService {
     const monto = Math.round(reserva.montoTotal);
     const returnUrl = `${this.backendUrl}/api/v1/pagos/webpay/retorno`;
 
-    const respuesta = (await this.transaction.create(
+    const transaction = await this.getTransaction();
+    const respuesta = (await transaction.create(
       buyOrder,
       sessionId,
       monto,
@@ -186,7 +195,8 @@ export class PagosService {
       };
     }
 
-    const respuesta = (await this.transaction.commit(tokenWs)) as {
+    const transaction = await this.getTransaction();
+    const respuesta = (await transaction.commit(tokenWs)) as {
       status: string;
       response_code: number;
       authorization_code?: string;

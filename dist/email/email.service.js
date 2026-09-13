@@ -48,41 +48,34 @@ var EmailService_1;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.EmailService = void 0;
 const common_1 = require("@nestjs/common");
-const config_1 = require("@nestjs/config");
 const bullmq_1 = require("@nestjs/bullmq");
 const bullmq_2 = require("bullmq");
 const nodemailer = __importStar(require("nodemailer"));
 const email_queue_1 = require("./email.queue");
+const configuracion_service_1 = require("../configuracion/configuracion.service");
 let EmailService = EmailService_1 = class EmailService {
-    config;
+    configuracion;
     queue;
     logger = new common_1.Logger(EmailService_1.name);
-    transporter;
-    fromAddress;
-    adminAddress;
-    constructor(config, queue) {
-        this.config = config;
+    constructor(configuracion, queue) {
+        this.configuracion = configuracion;
         this.queue = queue;
-        const host = this.config.get('SMTP_HOST');
-        const port = Number(this.config.get('SMTP_PORT') ?? 587);
-        const user = this.config.get('SMTP_USER');
-        const pass = this.config.get('SMTP_PASSWORD');
-        this.fromAddress =
-            this.config.get('SMTP_FROM') ?? 'no-reply@agencia-viajes.local';
-        this.adminAddress =
-            this.config.get('ADMIN_NOTIFICATION_EMAIL') ?? this.fromAddress;
-        if (!host || !user || !pass) {
-            this.logger.warn('SMTP no configurado (faltan SMTP_HOST/SMTP_USER/SMTP_PASSWORD). ' +
-                'Los correos se registrarán en el log en vez de enviarse.');
-            this.transporter = null;
-            return;
+    }
+    async getTransporter() {
+        const cfg = await this.configuracion.obtenerSmtp();
+        if (!cfg.host || !cfg.user || !cfg.password) {
+            this.logger.warn('SMTP no configurado (falta host/usuario/contraseña, ni en el ' +
+                'panel admin ni en .env). Los correos se registrarán en el log ' +
+                'en vez de enviarse.');
+            return { transporter: null, fromAddress: cfg.from, adminAddress: cfg.adminEmail || cfg.from };
         }
-        this.transporter = nodemailer.createTransport({
-            host,
-            port,
-            secure: port === 465,
-            auth: { user, pass },
+        const transporter = nodemailer.createTransport({
+            host: cfg.host,
+            port: cfg.port,
+            secure: cfg.port === 465,
+            auth: { user: cfg.user, pass: cfg.password },
         });
+        return { transporter, fromAddress: cfg.from, adminAddress: cfg.adminEmail || cfg.from };
     }
     async send(to, subject, html) {
         await this.queue.add('send', { to, subject, html }, {
@@ -93,16 +86,21 @@ let EmailService = EmailService_1 = class EmailService {
         });
     }
     async sendImmediate(to, subject, html) {
-        if (!this.transporter) {
+        const { transporter, fromAddress } = await this.getTransporter();
+        if (!transporter) {
             this.logger.log(`[EMAIL SIMULADO] para=${to} asunto="${subject}"`);
             return;
         }
-        await this.transporter.sendMail({
-            from: this.fromAddress,
+        await transporter.sendMail({
+            from: fromAddress,
             to,
             subject,
             html,
         });
+    }
+    async getAdminAddress() {
+        const { adminAddress } = await this.getTransporter();
+        return adminAddress;
     }
     async enviarConfirmacionReserva(params) {
         if (!params.email)
@@ -137,13 +135,13 @@ let EmailService = EmailService_1 = class EmailService {
        detalles.</p>`);
     }
     async notificarConsultaEscalada(params) {
-        await this.send(this.adminAddress, `[Requiere respuesta] ${params.asunto || 'Consulta de cliente'}`, `<h3>El asistente IA no pudo responder este correo automáticamente</h3>
+        await this.send(await this.getAdminAddress(), `[Requiere respuesta] ${params.asunto || 'Consulta de cliente'}`, `<h3>El asistente IA no pudo responder este correo automáticamente</h3>
        <p><strong>De:</strong> ${params.remitente}</p>
        <p><strong>Motivo de escalamiento:</strong> ${params.motivo}</p>
        <p>Revisa el correo directamente en Gmail (quedó marcado como no leído).</p>`);
     }
     async notificarNuevoMensaje(params) {
-        await this.send(this.adminAddress, `Nuevo mensaje de contacto${params.asunto ? `: ${params.asunto}` : ''}`, `<h3>Nuevo mensaje desde el formulario de contacto</h3>
+        await this.send(await this.getAdminAddress(), `Nuevo mensaje de contacto${params.asunto ? `: ${params.asunto}` : ''}`, `<h3>Nuevo mensaje desde el formulario de contacto</h3>
        <p><strong>Nombre:</strong> ${params.nombre}</p>
        <p><strong>Correo:</strong> ${params.correo}</p>
        <p><strong>Mensaje:</strong></p>
@@ -151,7 +149,7 @@ let EmailService = EmailService_1 = class EmailService {
     }
     async notificarNuevaCotizacion(params) {
         const asuntoRef = params.nombrePaquete || params.nombreDestino || params.nombreNoticia;
-        await this.send(this.adminAddress, `Nueva consulta${asuntoRef ? `: ${asuntoRef}` : ''}`, `<h3>Nueva consulta recibida desde el sitio</h3>
+        await this.send(await this.getAdminAddress(), `Nueva consulta${asuntoRef ? `: ${asuntoRef}` : ''}`, `<h3>Nueva consulta recibida desde el sitio</h3>
        <p><strong>Nombre:</strong> ${params.nombre}</p>
        <p><strong>Correo:</strong> ${params.email}</p>
        ${params.telefono ? `<p><strong>Teléfono:</strong> ${params.telefono}</p>` : ''}
@@ -188,7 +186,7 @@ let EmailService = EmailService_1 = class EmailService {
        <p>Este enlace vence en 1 hora. Si tú no solicitaste esto, puedes ignorar este correo: tu contraseña seguirá siendo la misma.</p>`);
     }
     async notificarProveedorNuevo(params) {
-        await this.send(this.adminAddress, 'Proveedor nuevo', `<h3>Nuevo proveedor registrado desde el sitio</h3>
+        await this.send(await this.getAdminAddress(), 'Proveedor nuevo', `<h3>Nuevo proveedor registrado desde el sitio</h3>
        <p><strong>Negocio:</strong> ${params.nombreNegocio}</p>
        ${params.rubro ? `<p><strong>Rubro:</strong> ${params.rubro}</p>` : ''}
        <p><strong>Contacto:</strong> ${params.nombreContacto}</p>
@@ -206,7 +204,7 @@ exports.EmailService = EmailService;
 exports.EmailService = EmailService = EmailService_1 = __decorate([
     (0, common_1.Injectable)(),
     __param(1, (0, bullmq_1.InjectQueue)(email_queue_1.EMAIL_QUEUE)),
-    __metadata("design:paramtypes", [config_1.ConfigService,
+    __metadata("design:paramtypes", [configuracion_service_1.ConfiguracionService,
         bullmq_2.Queue])
 ], EmailService);
 //# sourceMappingURL=email.service.js.map

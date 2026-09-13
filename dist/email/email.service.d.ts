@@ -1,16 +1,15 @@
-import { ConfigService } from '@nestjs/config';
 import { Queue } from 'bullmq';
 import { EmailJobData } from './email.queue';
+import { ConfiguracionService } from '../configuracion/configuracion.service';
 export declare class EmailService {
-    private readonly config;
+    private readonly configuracion;
     private readonly queue;
     private readonly logger;
-    private readonly transporter;
-    private readonly fromAddress;
-    private readonly adminAddress;
-    constructor(config: ConfigService, queue: Queue<EmailJobData>);
+    constructor(configuracion: ConfiguracionService, queue: Queue<EmailJobData>);
+    private getTransporter;
     private send;
     sendImmediate(to: string, subject: string, html: string): Promise<void>;
+    private getAdminAddress;
     enviarConfirmacionReserva(params: {
         email: string;
         nombreCliente: string;

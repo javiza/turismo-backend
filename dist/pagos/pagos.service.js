@@ -23,44 +23,44 @@ const transbank_sdk_1 = require("transbank-sdk");
 const pago_webpay_entity_1 = require("./entities/pago-webpay.entity");
 const reserva_entity_1 = require("../reservas/entities/reserva.entity");
 const movimiento_financiero_entity_1 = require("../finanzas/entities/movimiento-financiero.entity");
+const configuracion_service_1 = require("../configuracion/configuracion.service");
 let PagosService = PagosService_1 = class PagosService {
     config;
+    configuracion;
     pagoRepository;
     reservaRepository;
     logger = new common_1.Logger(PagosService_1.name);
-    transaction;
-    esProduccion;
     backendUrl;
     frontendUrl;
-    constructor(config, pagoRepository, reservaRepository) {
+    constructor(config, configuracion, pagoRepository, reservaRepository) {
         this.config = config;
+        this.configuracion = configuracion;
         this.pagoRepository = pagoRepository;
         this.reservaRepository = reservaRepository;
-        const commerceCode = this.config.get('TRANSBANK_COMMERCE_CODE');
-        const apiKey = this.config.get('TRANSBANK_API_KEY');
-        this.esProduccion =
-            this.config.get('TRANSBANK_ENVIRONMENT') === 'production';
         this.backendUrl = (this.config.get('BACKEND_PUBLIC_URL') ??
             `http://localhost:${this.config.get('PORT') ?? '3000'}`).replace(/\/+$/, '');
         this.frontendUrl = (this.config.get('FRONTEND_URL') ?? 'http://localhost:5173').replace(/\/+$/, '');
-        if (this.esProduccion) {
-            if (!commerceCode || !apiKey) {
-                throw new Error('TRANSBANK_ENVIRONMENT=production requiere TRANSBANK_COMMERCE_CODE ' +
-                    'y TRANSBANK_API_KEY (credenciales reales entregadas por Transbank ' +
-                    'tras el proceso de afiliación/certificación de tu comercio).');
+    }
+    async getTransaction() {
+        const cfg = await this.configuracion.obtenerTransbank();
+        const esProduccion = cfg.environment === 'production';
+        if (esProduccion) {
+            if (!cfg.commerceCode || !cfg.apiKey) {
+                throw new Error('Transbank en modo producción requiere código de comercio y API ' +
+                    'key reales (configúralos en el panel admin → Configuración → ' +
+                    'Transbank, con las credenciales que te entrega Transbank tras ' +
+                    'la afiliación/certificación de tu comercio).');
             }
-            this.transaction = new transbank_sdk_1.WebpayPlus.Transaction(new transbank_sdk_1.Options(commerceCode, apiKey, transbank_sdk_1.Environment.Production));
-            this.logger.log('Webpay Plus configurado en modo PRODUCCIÓN.');
+            return new transbank_sdk_1.WebpayPlus.Transaction(new transbank_sdk_1.Options(cfg.commerceCode, cfg.apiKey, transbank_sdk_1.Environment.Production));
         }
-        else {
-            this.transaction =
-                commerceCode && apiKey
-                    ? new transbank_sdk_1.WebpayPlus.Transaction(new transbank_sdk_1.Options(commerceCode, apiKey, transbank_sdk_1.Environment.Integration))
-                    : transbank_sdk_1.WebpayPlus.Transaction.buildForIntegration(transbank_sdk_1.IntegrationCommerceCodes.WEBPAY_PLUS, transbank_sdk_1.IntegrationApiKeys.WEBPAY);
-            this.logger.warn('Webpay Plus en modo INTEGRACIÓN (pruebas) — no se mueve dinero ' +
-                'real. Configura TRANSBANK_ENVIRONMENT=production con credenciales ' +
-                'reales antes de salir a producción.');
+        if (cfg.commerceCode && cfg.apiKey) {
+            return new transbank_sdk_1.WebpayPlus.Transaction(new transbank_sdk_1.Options(cfg.commerceCode, cfg.apiKey, transbank_sdk_1.Environment.Integration));
         }
+        this.logger.warn('Webpay Plus en modo INTEGRACIÓN (pruebas, credenciales públicas) — ' +
+            'no se mueve dinero real. Configura credenciales reales y ambiente ' +
+            '"production" desde el panel admin → Configuración → Transbank ' +
+            'antes de salir a producción.');
+        return transbank_sdk_1.WebpayPlus.Transaction.buildForIntegration(transbank_sdk_1.IntegrationCommerceCodes.WEBPAY_PLUS, transbank_sdk_1.IntegrationApiKeys.WEBPAY);
     }
     async iniciar(reservaId) {
         const reserva = await this.reservaRepository.findOne({
@@ -82,7 +82,8 @@ let PagosService = PagosService_1 = class PagosService {
         const sessionId = (0, crypto_1.randomUUID)();
         const monto = Math.round(reserva.montoTotal);
         const returnUrl = `${this.backendUrl}/api/v1/pagos/webpay/retorno`;
-        const respuesta = (await this.transaction.create(buyOrder, sessionId, monto, returnUrl));
+        const transaction = await this.getTransaction();
+        const respuesta = (await transaction.create(buyOrder, sessionId, monto, returnUrl));
         await this.pagoRepository.save(this.pagoRepository.create({
             reservaId,
             buyOrder,
@@ -108,7 +109,8 @@ let PagosService = PagosService_1 = class PagosService {
                 anulado: pago.estado === pago_webpay_entity_1.EstadoPagoWebpay.ANULADO,
             };
         }
-        const respuesta = (await this.transaction.commit(tokenWs));
+        const transaction = await this.getTransaction();
+        const respuesta = (await transaction.commit(tokenWs));
         const aprobado = respuesta.status === 'AUTHORIZED' && respuesta.response_code === 0;
         pago.estado = aprobado
             ? pago_webpay_entity_1.EstadoPagoWebpay.AUTORIZADO
@@ -156,9 +158,10 @@ let PagosService = PagosService_1 = class PagosService {
 exports.PagosService = PagosService;
 exports.PagosService = PagosService = PagosService_1 = __decorate([
     (0, common_1.Injectable)(),
-    __param(1, (0, typeorm_1.InjectRepository)(pago_webpay_entity_1.PagoWebpay)),
-    __param(2, (0, typeorm_1.InjectRepository)(reserva_entity_1.Reserva)),
+    __param(2, (0, typeorm_1.InjectRepository)(pago_webpay_entity_1.PagoWebpay)),
+    __param(3, (0, typeorm_1.InjectRepository)(reserva_entity_1.Reserva)),
     __metadata("design:paramtypes", [config_1.ConfigService,
+        configuracion_service_1.ConfiguracionService,
         typeorm_2.Repository,
         typeorm_2.Repository])
 ], PagosService);

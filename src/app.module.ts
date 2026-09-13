@@ -51,6 +51,7 @@ import { AuditoriaModule } from './auditoria/auditoria.module';
 import { VisitasModule } from './visitas/visitas.module';
 
 import { AsistenteIaModule } from './asistente-ia/asistente-ia.module';
+import { ConfiguracionModule } from './configuracion/configuracion.module';
 
 // Filtros (crear más adelante)
 // import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
@@ -115,6 +116,18 @@ import { AsistenteIaModule } from './asistente-ia/asistente-ia.module';
         // desarrollo con localhost no importa; en producción debe ser la
         // URL real y accesible desde internet del backend.
         BACKEND_PUBLIC_URL: Joi.string().allow('').optional(),
+
+        // Llave maestra para cifrar/descifrar credenciales que el admin
+        // guarda desde el panel (SMTP, WhatsApp, Transbank, Mercado Pago).
+        // Generar con: openssl rand -hex 32. Si cambia, todo lo ya
+        // guardado en "configuraciones_integracion" queda ilegible —
+        // trátala como un secreto tan crítico como JWT_SECRET.
+        CONFIG_ENCRYPTION_KEY: Joi.string().min(16).optional(),
+
+        // Mercado Pago (opcional por .env: normalmente se configura desde
+        // el panel admin en Configuración → Mercado Pago).
+        MERCADOPAGO_ACCESS_TOKEN: Joi.string().allow('').optional(),
+        MERCADOPAGO_PUBLIC_KEY: Joi.string().allow('').optional(),
 
         SEED_ADMIN_EMAIL: Joi.string().email().required(),
         SEED_ADMIN_PASSWORD: Joi.string().required(),
@@ -236,6 +249,7 @@ import { AsistenteIaModule } from './asistente-ia/asistente-ia.module';
      * Proveedores
      */
     ProveedoresModule,
+    ConfiguracionModule,
 
     /**
      * Inteligencia Artificial

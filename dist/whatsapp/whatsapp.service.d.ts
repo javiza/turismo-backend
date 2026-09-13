@@ -1,14 +1,12 @@
-import { ConfigService } from '@nestjs/config';
 import { Queue } from 'bullmq';
 import { WhatsappJobData } from './whatsapp.queue';
+import { ConfiguracionService } from '../configuracion/configuracion.service';
 export declare class WhatsappService {
-    private readonly config;
+    private readonly configuracion;
     private readonly queue;
     private readonly logger;
-    private readonly apiUrl;
-    private readonly token;
-    private readonly adminNumber;
-    constructor(config: ConfigService, queue: Queue<WhatsappJobData>);
+    constructor(configuracion: ConfiguracionService, queue: Queue<WhatsappJobData>);
+    private getConfig;
     private enviarTexto;
     enviarTextoImmediate(to: string, texto: string): Promise<void>;
     notificarProveedorNuevo(params: {

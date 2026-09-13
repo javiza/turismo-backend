@@ -12,12 +12,13 @@ const bullmq_1 = require("@nestjs/bullmq");
 const whatsapp_service_1 = require("./whatsapp.service");
 const whatsapp_processor_1 = require("./whatsapp.processor");
 const whatsapp_queue_1 = require("./whatsapp.queue");
+const configuracion_module_1 = require("../configuracion/configuracion.module");
 let WhatsappModule = class WhatsappModule {
 };
 exports.WhatsappModule = WhatsappModule;
 exports.WhatsappModule = WhatsappModule = __decorate([
     (0, common_1.Module)({
-        imports: [bullmq_1.BullModule.registerQueue({ name: whatsapp_queue_1.WHATSAPP_QUEUE })],
+        imports: [bullmq_1.BullModule.registerQueue({ name: whatsapp_queue_1.WHATSAPP_QUEUE }), configuracion_module_1.ConfiguracionModule],
         providers: [whatsapp_service_1.WhatsappService, whatsapp_processor_1.WhatsappProcessor],
         exports: [whatsapp_service_1.WhatsappService],
     })

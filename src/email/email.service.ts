@@ -1,10 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import * as nodemailer from 'nodemailer';
 
 import { EMAIL_QUEUE, EmailJobData } from './email.queue';
+import { ConfiguracionService } from '../configuracion/configuracion.service';
 
 /**
  * Envío de correos transaccionales (confirmación de reserva, confirmación
@@ -23,39 +23,41 @@ import { EMAIL_QUEUE, EmailJobData } from './email.queue';
 @Injectable()
 export class EmailService {
   private readonly logger = new Logger(EmailService.name);
-  private readonly transporter: nodemailer.Transporter | null;
-  private readonly fromAddress: string;
-  private readonly adminAddress: string;
 
   constructor(
-    private readonly config: ConfigService,
+    private readonly configuracion: ConfiguracionService,
     @InjectQueue(EMAIL_QUEUE) private readonly queue: Queue<EmailJobData>,
-  ) {
-    const host = this.config.get<string>('SMTP_HOST');
-    const port = Number(this.config.get<string>('SMTP_PORT') ?? 587);
-    const user = this.config.get<string>('SMTP_USER');
-    const pass = this.config.get<string>('SMTP_PASSWORD');
+  ) {}
 
-    this.fromAddress =
-      this.config.get<string>('SMTP_FROM') ?? 'no-reply@agencia-viajes.local';
-    this.adminAddress =
-      this.config.get<string>('ADMIN_NOTIFICATION_EMAIL') ?? this.fromAddress;
+  /**
+   * Arma el transporter en cada envío (no una sola vez al arrancar), leyendo
+   * siempre la config vigente — así un cambio de SMTP desde el panel admin
+   * aplica de inmediato, sin reiniciar el backend.
+   */
+  private async getTransporter(): Promise<{
+    transporter: nodemailer.Transporter | null;
+    fromAddress: string;
+    adminAddress: string;
+  }> {
+    const cfg = await this.configuracion.obtenerSmtp();
 
-    if (!host || !user || !pass) {
+    if (!cfg.host || !cfg.user || !cfg.password) {
       this.logger.warn(
-        'SMTP no configurado (faltan SMTP_HOST/SMTP_USER/SMTP_PASSWORD). ' +
-          'Los correos se registrarán en el log en vez de enviarse.',
+        'SMTP no configurado (falta host/usuario/contraseña, ni en el ' +
+          'panel admin ni en .env). Los correos se registrarán en el log ' +
+          'en vez de enviarse.',
       );
-      this.transporter = null;
-      return;
+      return { transporter: null, fromAddress: cfg.from, adminAddress: cfg.adminEmail || cfg.from };
     }
 
-    this.transporter = nodemailer.createTransport({
-      host,
-      port,
-      secure: port === 465,
-      auth: { user, pass },
+    const transporter = nodemailer.createTransport({
+      host: cfg.host,
+      port: cfg.port,
+      secure: cfg.port === 465,
+      auth: { user: cfg.user, pass: cfg.password },
     });
+
+    return { transporter, fromAddress: cfg.from, adminAddress: cfg.adminEmail || cfg.from };
   }
 
   /** Encola el correo para envío en segundo plano (lo usan todos los métodos públicos de abajo). */
@@ -81,17 +83,25 @@ export class EmailService {
     subject: string,
     html: string,
   ): Promise<void> {
-    if (!this.transporter) {
+    const { transporter, fromAddress } = await this.getTransporter();
+
+    if (!transporter) {
       this.logger.log(`[EMAIL SIMULADO] para=${to} asunto="${subject}"`);
       return;
     }
 
-    await this.transporter.sendMail({
-      from: this.fromAddress,
+    await transporter.sendMail({
+      from: fromAddress,
       to,
       subject,
       html,
     });
+  }
+
+  /** Correo del admin al que se avisan mensajes nuevos, cotizaciones, etc. */
+  private async getAdminAddress(): Promise<string> {
+    const { adminAddress } = await this.getTransporter();
+    return adminAddress;
   }
 
   async enviarConfirmacionReserva(params: {
@@ -160,7 +170,7 @@ export class EmailService {
     motivo: string;
   }): Promise<void> {
     await this.send(
-      this.adminAddress,
+      await this.getAdminAddress(),
       `[Requiere respuesta] ${params.asunto || 'Consulta de cliente'}`,
       `<h3>El asistente IA no pudo responder este correo automáticamente</h3>
        <p><strong>De:</strong> ${params.remitente}</p>
@@ -176,7 +186,7 @@ export class EmailService {
     mensaje: string;
   }): Promise<void> {
     await this.send(
-      this.adminAddress,
+      await this.getAdminAddress(),
       `Nuevo mensaje de contacto${params.asunto ? `: ${params.asunto}` : ''}`,
       `<h3>Nuevo mensaje desde el formulario de contacto</h3>
        <p><strong>Nombre:</strong> ${params.nombre}</p>
@@ -207,7 +217,7 @@ export class EmailService {
       params.nombrePaquete || params.nombreDestino || params.nombreNoticia;
 
     await this.send(
-      this.adminAddress,
+      await this.getAdminAddress(),
       `Nueva consulta${asuntoRef ? `: ${asuntoRef}` : ''}`,
       `<h3>Nueva consulta recibida desde el sitio</h3>
        <p><strong>Nombre:</strong> ${params.nombre}</p>
@@ -283,7 +293,7 @@ export class EmailService {
     precioReferencial?: number;
   }): Promise<void> {
     await this.send(
-      this.adminAddress,
+      await this.getAdminAddress(),
       'Proveedor nuevo',
       `<h3>Nuevo proveedor registrado desde el sitio</h3>
        <p><strong>Negocio:</strong> ${params.nombreNegocio}</p>
