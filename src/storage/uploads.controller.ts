@@ -58,6 +58,25 @@ export class UploadsController {
     return this.cloudinary.subirImagen(archivo, carpeta);
   }
 
+  // Favicon del sitio (ícono de la pestaña). Endpoint propio porque acepta
+  // formatos distintos a las imágenes normales (.ico, .svg) y las sube sin
+  // transformar. El formato se valida por firma del archivo, no por
+  // mimetype (ver detectarTipoFavicon).
+  @Post('favicon')
+  @ApiOperation({
+    summary: 'Sube el favicon del sitio (PNG/ICO/SVG/JPG) y devuelve su URL',
+  })
+  @ApiConsumes('multipart/form-data')
+  @UseInterceptors(
+    FileInterceptor('archivo', {
+      storage: undefined, // memoria (buffer), no se escribe a disco
+      limits: { fileSize: 1024 * 1024 },
+    }),
+  )
+  async subirFavicon(@UploadedFile() archivo: Express.Multer.File) {
+    return this.cloudinary.subirFavicon(archivo);
+  }
+
   // Subida de una tipografía propia (.ttf/.otf/.woff/.woff2) para el
   // slogan de la home. Va en un endpoint aparte del de imágenes porque
   // valida extensión/tamaño distintos y sube como recurso "raw" en vez

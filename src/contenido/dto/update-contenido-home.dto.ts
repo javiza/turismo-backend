@@ -24,6 +24,23 @@ export const FUENTES_SLOGAN_KEYS = [
   'shadows-into-light',
 ] as const;
 
+// Keys de las tipografías generales del sitio (texto y títulos). Deben
+// coincidir con FUENTES_SITIO en el frontend (src/lib/fuentes-sitio.ts).
+export const FUENTES_SITIO_KEYS = [
+  'inter',
+  'poppins',
+  'roboto',
+  'open-sans',
+  'lato',
+  'montserrat',
+  'nunito',
+  'dm-sans',
+  'fraunces',
+  'playfair-display',
+  'merriweather',
+  'lora',
+] as const;
+
 class ResenaHomeDto {
   @IsString()
   @MaxLength(150)
@@ -102,6 +119,47 @@ export class UpdateContenidoHomeDto {
     message: 'colorFooter debe ser un color hexadecimal, ej: #f8fbff',
   })
   colorFooter?: string;
+
+  // Color de fondo de los rectángulos/tarjetas del sitio. "" = volver al
+  // blanco por defecto.
+  @IsOptional()
+  @IsString()
+  @Matches(/^(#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}))?$/, {
+    message: 'colorTarjetas debe ser un color hexadecimal, ej: #ffffff',
+  })
+  colorTarjetas?: string;
+
+  // URL del favicon (la que devuelve POST /uploads/favicon). "" = quitarlo.
+  @IsOptional()
+  @IsString()
+  @MaxLength(1000)
+  faviconUrl?: string;
+
+  // Tipografía general: preseleccionada (key) y/o propia (URL de
+  // POST /uploads/fuentes). "" en *Url = quitar la propia.
+  @IsOptional()
+  @IsString()
+  @IsIn(FUENTES_SITIO_KEYS, {
+    message: `fuenteTexto debe ser una de: ${FUENTES_SITIO_KEYS.join(', ')}`,
+  })
+  fuenteTexto?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(1000)
+  fuenteTextoUrl?: string;
+
+  @IsOptional()
+  @IsString()
+  @IsIn(FUENTES_SITIO_KEYS, {
+    message: `fuenteTitulos debe ser una de: ${FUENTES_SITIO_KEYS.join(', ')}`,
+  })
+  fuenteTitulos?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(1000)
+  fuenteTitulosUrl?: string;
 
   @IsOptional()
   @IsString()

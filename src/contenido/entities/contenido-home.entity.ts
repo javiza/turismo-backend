@@ -65,6 +65,33 @@ export class ContenidoHome {
   @Column('text', { name: 'color_footer', nullable: true })
   colorFooter!: string | null;
 
+  // Color (hex) de fondo de los rectángulos/tarjetas del sitio (<Card>).
+  // Nullable: mientras el admin no elija uno, el frontend usa blanco.
+  @Column('text', { name: 'color_tarjetas', nullable: true })
+  colorTarjetas!: string | null;
+
+  // Favicon (ícono de la pestaña del navegador), subido desde el
+  // computador del admin vía POST /uploads/favicon. Nullable: sin valor,
+  // el frontend no declara ningún ícono.
+  @Column('text', { name: 'favicon_url', nullable: true })
+  faviconUrl!: string | null;
+
+  // Tipografía general del sitio. *Key* = una de las preseleccionadas
+  // (FUENTES_SITIO en el frontend: src/lib/fuentes-sitio.ts). *Url* = una
+  // propia subida por el admin (POST /uploads/fuentes); si existe, tiene
+  // prioridad sobre la key. "texto" = párrafos/UI; "titulos" = encabezados.
+  @Column('text', { name: 'fuente_texto', default: 'inter' })
+  fuenteTexto!: string;
+
+  @Column('text', { name: 'fuente_texto_url', nullable: true })
+  fuenteTextoUrl!: string | null;
+
+  @Column('text', { name: 'fuente_titulos', default: 'fraunces' })
+  fuenteTitulos!: string;
+
+  @Column('text', { name: 'fuente_titulos_url', nullable: true })
+  fuenteTitulosUrl!: string | null;
+
   @Column('text')
   titulo!: string;
 

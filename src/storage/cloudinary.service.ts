@@ -21,6 +21,50 @@ const TAMANO_MAXIMO_BYTES = 5 * 1024 * 1024; // 5 MB
 const EXTENSIONES_FUENTE_PERMITIDAS = ['.ttf', '.otf', '.woff', '.woff2'];
 const TAMANO_MAXIMO_FUENTE_BYTES = 2 * 1024 * 1024; // 2 MB
 
+// Favicon: solo formatos que TODOS los navegadores aceptan como ícono de
+// pestaña. Se excluyen WEBP/AVIF a propósito (Safari y otros no los
+// soportan como favicon), por eso no se reutiliza subirImagen(), que
+// además re-codifica todo a webp/avif con fetch_format:auto.
+const TAMANO_MAXIMO_FAVICON_BYTES = 1024 * 1024; // 1 MB
+
+export type TipoFavicon = 'png' | 'ico' | 'jpeg' | 'svg';
+
+/**
+ * Detecta el tipo real del archivo por sus primeros bytes (firma), no por
+ * el mimetype/extensión que declara el cliente: el mimetype de los .ico
+ * varía según navegador/SO (image/x-icon, image/vnd.microsoft.icon...) y
+ * además es trivial de falsear. Devuelve null si no es un formato válido.
+ */
+export function detectarTipoFavicon(buffer: Buffer): TipoFavicon | null {
+  if (!buffer || buffer.length < 4) return null;
+  if (
+    buffer[0] === 0x89 &&
+    buffer[1] === 0x50 &&
+    buffer[2] === 0x4e &&
+    buffer[3] === 0x47
+  ) {
+    return 'png';
+  }
+  if (
+    buffer[0] === 0x00 &&
+    buffer[1] === 0x00 &&
+    buffer[2] === 0x01 &&
+    buffer[3] === 0x00
+  ) {
+    return 'ico';
+  }
+  if (buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff) {
+    return 'jpeg';
+  }
+  // SVG es texto: buscamos la etiqueta <svg en el inicio (puede haber un
+  // prólogo <?xml ...?>, un doctype o comentarios antes).
+  const inicio = buffer.subarray(0, 2048).toString('utf8').toLowerCase();
+  if (inicio.includes('<svg')) {
+    return 'svg';
+  }
+  return null;
+}
+
 export interface ImagenSubida {
   url: string;
   publicId: string;
@@ -179,6 +223,63 @@ export class CloudinaryService {
             // recursos "raw".
             public_id: file.originalname.replace(/\s+/g, '_'),
             use_filename: true,
+            unique_filename: true,
+            overwrite: false,
+          },
+          (error, result) => {
+            if (error || !result) {
+              return reject(
+                error ?? new Error('Cloudinary no devolvió resultado'),
+              );
+            }
+            resolve(result);
+          },
+        );
+        stream.end(file.buffer);
+      },
+    );
+
+    return { url: resultado.secure_url, publicId: resultado.public_id };
+  }
+
+  validarArchivoFavicon(file: Express.Multer.File | undefined): TipoFavicon {
+    if (!file) {
+      throw new BadRequestException('No se envió ningún archivo');
+    }
+    if (file.size > TAMANO_MAXIMO_FAVICON_BYTES) {
+      throw new BadRequestException('El favicon supera el máximo de 1 MB');
+    }
+    const tipo = detectarTipoFavicon(file.buffer);
+    if (!tipo) {
+      throw new BadRequestException(
+        'Formato de favicon no permitido. Usa PNG, ICO, SVG o JPG.',
+      );
+    }
+    return tipo;
+  }
+
+  /**
+   * Sube el favicon del sitio a Cloudinary SIN transformarlo (se conserva
+   * el formato original: la URL resultante termina en .png/.ico/.svg/.jpg
+   * y el navegador la usa directo en <link rel="icon">).
+   */
+  async subirFavicon(
+    file: Express.Multer.File,
+  ): Promise<{ url: string; publicId: string }> {
+    this.validarArchivoFavicon(file);
+
+    if (!this.configured) {
+      throw new InternalServerErrorException(
+        'El almacenamiento de archivos no está configurado en el servidor',
+      );
+    }
+
+    const resultado = await new Promise<UploadApiResponse>(
+      (resolve, reject) => {
+        const stream = cloudinary.uploader.upload_stream(
+          {
+            folder: 'turismo/contenido/favicon',
+            resource_type: 'image',
             unique_filename: true,
             overwrite: false,
           },

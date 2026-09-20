@@ -64,6 +64,7 @@ Además del CRUD del catálogo y las reservas, el backend incluye:
 ## Scripts útiles
 
 ```bash
+npm run seed # genera la seed inicial
 npm run migration:generate   # genera una migración a partir de cambios en entidades
 npm run migration:run        # aplica migraciones pendientes
 npm run reset-admin-password # resetea la contraseña del admin (recuperación de emergencia)
