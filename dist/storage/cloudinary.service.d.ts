@@ -1,4 +1,6 @@
 import { ConfigService } from '@nestjs/config';
+export type TipoFavicon = 'png' | 'ico' | 'jpeg' | 'svg';
+export declare function detectarTipoFavicon(buffer: Buffer): TipoFavicon | null;
 export interface ImagenSubida {
     url: string;
     publicId: string;
@@ -15,6 +17,11 @@ export declare class CloudinaryService {
     subirImagen(file: Express.Multer.File, carpeta: 'destinos' | 'paquetes' | 'ofertas' | 'contenido' | 'noticias' | 'proveedores'): Promise<ImagenSubida>;
     validarArchivoFuente(file: Express.Multer.File | undefined): void;
     subirFuente(file: Express.Multer.File): Promise<{
+        url: string;
+        publicId: string;
+    }>;
+    validarArchivoFavicon(file: Express.Multer.File | undefined): TipoFavicon;
+    subirFavicon(file: Express.Multer.File): Promise<{
         url: string;
         publicId: string;
     }>;

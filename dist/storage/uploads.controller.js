@@ -37,6 +37,9 @@ let UploadsController = class UploadsController {
     async subir(carpeta, archivo) {
         return this.cloudinary.subirImagen(archivo, carpeta);
     }
+    async subirFavicon(archivo) {
+        return this.cloudinary.subirFavicon(archivo);
+    }
     async subirFuente(archivo) {
         return this.cloudinary.subirFuente(archivo);
     }
@@ -58,6 +61,21 @@ __decorate([
     __metadata("design:paramtypes", [String, Object]),
     __metadata("design:returntype", Promise)
 ], UploadsController.prototype, "subir", null);
+__decorate([
+    (0, common_1.Post)('favicon'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Sube el favicon del sitio (PNG/ICO/SVG/JPG) y devuelve su URL',
+    }),
+    (0, swagger_1.ApiConsumes)('multipart/form-data'),
+    (0, common_1.UseInterceptors)((0, platform_express_1.FileInterceptor)('archivo', {
+        storage: undefined,
+        limits: { fileSize: 1024 * 1024 },
+    })),
+    __param(0, (0, common_1.UploadedFile)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], UploadsController.prototype, "subirFavicon", null);
 __decorate([
     (0, common_1.Post)('fuentes'),
     (0, swagger_1.ApiOperation)({

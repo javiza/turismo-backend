@@ -1,4 +1,5 @@
 export declare const FUENTES_SLOGAN_KEYS: readonly ["caveat", "dancing-script", "pacifico", "sacramento", "shadows-into-light"];
+export declare const FUENTES_SITIO_KEYS: readonly ["inter", "poppins", "roboto", "open-sans", "lato", "montserrat", "nunito", "dm-sans", "fraunces", "playfair-display", "merriweather", "lora"];
 declare class ResenaHomeDto {
     nombre: string;
     texto: string;
@@ -13,6 +14,12 @@ export declare class UpdateContenidoHomeDto {
     colorFondo?: string;
     colorNavbar?: string;
     colorFooter?: string;
+    colorTarjetas?: string;
+    faviconUrl?: string;
+    fuenteTexto?: string;
+    fuenteTextoUrl?: string;
+    fuenteTitulos?: string;
+    fuenteTitulosUrl?: string;
     titulo?: string;
     subtitulo?: string;
     presentacion?: string;

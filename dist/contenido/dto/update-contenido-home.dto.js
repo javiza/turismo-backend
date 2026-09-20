@@ -9,7 +9,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.UpdateContenidoHomeDto = exports.FUENTES_SLOGAN_KEYS = void 0;
+exports.UpdateContenidoHomeDto = exports.FUENTES_SITIO_KEYS = exports.FUENTES_SLOGAN_KEYS = void 0;
 const class_validator_1 = require("class-validator");
 const class_transformer_1 = require("class-transformer");
 exports.FUENTES_SLOGAN_KEYS = [
@@ -18,6 +18,20 @@ exports.FUENTES_SLOGAN_KEYS = [
     'pacifico',
     'sacramento',
     'shadows-into-light',
+];
+exports.FUENTES_SITIO_KEYS = [
+    'inter',
+    'poppins',
+    'roboto',
+    'open-sans',
+    'lato',
+    'montserrat',
+    'nunito',
+    'dm-sans',
+    'fraunces',
+    'playfair-display',
+    'merriweather',
+    'lora',
 ];
 class ResenaHomeDto {
     nombre;
@@ -50,6 +64,12 @@ class UpdateContenidoHomeDto {
     colorFondo;
     colorNavbar;
     colorFooter;
+    colorTarjetas;
+    faviconUrl;
+    fuenteTexto;
+    fuenteTextoUrl;
+    fuenteTitulos;
+    fuenteTitulosUrl;
     titulo;
     subtitulo;
     presentacion;
@@ -124,6 +144,48 @@ __decorate([
     }),
     __metadata("design:type", String)
 ], UpdateContenidoHomeDto.prototype, "colorFooter", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.Matches)(/^(#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}))?$/, {
+        message: 'colorTarjetas debe ser un color hexadecimal, ej: #ffffff',
+    }),
+    __metadata("design:type", String)
+], UpdateContenidoHomeDto.prototype, "colorTarjetas", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.MaxLength)(1000),
+    __metadata("design:type", String)
+], UpdateContenidoHomeDto.prototype, "faviconUrl", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsIn)(exports.FUENTES_SITIO_KEYS, {
+        message: `fuenteTexto debe ser una de: ${exports.FUENTES_SITIO_KEYS.join(', ')}`,
+    }),
+    __metadata("design:type", String)
+], UpdateContenidoHomeDto.prototype, "fuenteTexto", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.MaxLength)(1000),
+    __metadata("design:type", String)
+], UpdateContenidoHomeDto.prototype, "fuenteTextoUrl", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsIn)(exports.FUENTES_SITIO_KEYS, {
+        message: `fuenteTitulos debe ser una de: ${exports.FUENTES_SITIO_KEYS.join(', ')}`,
+    }),
+    __metadata("design:type", String)
+], UpdateContenidoHomeDto.prototype, "fuenteTitulos", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.MaxLength)(1000),
+    __metadata("design:type", String)
+], UpdateContenidoHomeDto.prototype, "fuenteTitulosUrl", void 0);
 __decorate([
     (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsString)(),

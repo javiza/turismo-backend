@@ -11,6 +11,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var CloudinaryService_1;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.CloudinaryService = void 0;
+exports.detectarTipoFavicon = detectarTipoFavicon;
 const common_1 = require("@nestjs/common");
 const config_1 = require("@nestjs/config");
 const cloudinary_1 = require("cloudinary");
@@ -23,6 +24,31 @@ const TIPOS_PERMITIDOS = [
 const TAMANO_MAXIMO_BYTES = 5 * 1024 * 1024;
 const EXTENSIONES_FUENTE_PERMITIDAS = ['.ttf', '.otf', '.woff', '.woff2'];
 const TAMANO_MAXIMO_FUENTE_BYTES = 2 * 1024 * 1024;
+const TAMANO_MAXIMO_FAVICON_BYTES = 1024 * 1024;
+function detectarTipoFavicon(buffer) {
+    if (!buffer || buffer.length < 4)
+        return null;
+    if (buffer[0] === 0x89 &&
+        buffer[1] === 0x50 &&
+        buffer[2] === 0x4e &&
+        buffer[3] === 0x47) {
+        return 'png';
+    }
+    if (buffer[0] === 0x00 &&
+        buffer[1] === 0x00 &&
+        buffer[2] === 0x01 &&
+        buffer[3] === 0x00) {
+        return 'ico';
+    }
+    if (buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff) {
+        return 'jpeg';
+    }
+    const inicio = buffer.subarray(0, 2048).toString('utf8').toLowerCase();
+    if (inicio.includes('<svg')) {
+        return 'svg';
+    }
+    return null;
+}
 let CloudinaryService = CloudinaryService_1 = class CloudinaryService {
     config;
     logger = new common_1.Logger(CloudinaryService_1.name);
@@ -107,6 +133,40 @@ let CloudinaryService = CloudinaryService_1 = class CloudinaryService {
                 resource_type: 'raw',
                 public_id: file.originalname.replace(/\s+/g, '_'),
                 use_filename: true,
+                unique_filename: true,
+                overwrite: false,
+            }, (error, result) => {
+                if (error || !result) {
+                    return reject(error ?? new Error('Cloudinary no devolvió resultado'));
+                }
+                resolve(result);
+            });
+            stream.end(file.buffer);
+        });
+        return { url: resultado.secure_url, publicId: resultado.public_id };
+    }
+    validarArchivoFavicon(file) {
+        if (!file) {
+            throw new common_1.BadRequestException('No se envió ningún archivo');
+        }
+        if (file.size > TAMANO_MAXIMO_FAVICON_BYTES) {
+            throw new common_1.BadRequestException('El favicon supera el máximo de 1 MB');
+        }
+        const tipo = detectarTipoFavicon(file.buffer);
+        if (!tipo) {
+            throw new common_1.BadRequestException('Formato de favicon no permitido. Usa PNG, ICO, SVG o JPG.');
+        }
+        return tipo;
+    }
+    async subirFavicon(file) {
+        this.validarArchivoFavicon(file);
+        if (!this.configured) {
+            throw new common_1.InternalServerErrorException('El almacenamiento de archivos no está configurado en el servidor');
+        }
+        const resultado = await new Promise((resolve, reject) => {
+            const stream = cloudinary_1.v2.uploader.upload_stream({
+                folder: 'turismo/contenido/favicon',
+                resource_type: 'image',
                 unique_filename: true,
                 overwrite: false,
             }, (error, result) => {

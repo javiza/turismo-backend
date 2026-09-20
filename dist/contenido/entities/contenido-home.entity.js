@@ -21,6 +21,12 @@ let ContenidoHome = class ContenidoHome {
     colorFondo;
     colorNavbar;
     colorFooter;
+    colorTarjetas;
+    faviconUrl;
+    fuenteTexto;
+    fuenteTextoUrl;
+    fuenteTitulos;
+    fuenteTitulosUrl;
     titulo;
     subtitulo;
     presentacion;
@@ -74,6 +80,30 @@ __decorate([
     (0, typeorm_1.Column)('text', { name: 'color_footer', nullable: true }),
     __metadata("design:type", Object)
 ], ContenidoHome.prototype, "colorFooter", void 0);
+__decorate([
+    (0, typeorm_1.Column)('text', { name: 'color_tarjetas', nullable: true }),
+    __metadata("design:type", Object)
+], ContenidoHome.prototype, "colorTarjetas", void 0);
+__decorate([
+    (0, typeorm_1.Column)('text', { name: 'favicon_url', nullable: true }),
+    __metadata("design:type", Object)
+], ContenidoHome.prototype, "faviconUrl", void 0);
+__decorate([
+    (0, typeorm_1.Column)('text', { name: 'fuente_texto', default: 'inter' }),
+    __metadata("design:type", String)
+], ContenidoHome.prototype, "fuenteTexto", void 0);
+__decorate([
+    (0, typeorm_1.Column)('text', { name: 'fuente_texto_url', nullable: true }),
+    __metadata("design:type", Object)
+], ContenidoHome.prototype, "fuenteTextoUrl", void 0);
+__decorate([
+    (0, typeorm_1.Column)('text', { name: 'fuente_titulos', default: 'fraunces' }),
+    __metadata("design:type", String)
+], ContenidoHome.prototype, "fuenteTitulos", void 0);
+__decorate([
+    (0, typeorm_1.Column)('text', { name: 'fuente_titulos_url', nullable: true }),
+    __metadata("design:type", Object)
+], ContenidoHome.prototype, "fuenteTitulosUrl", void 0);
 __decorate([
     (0, typeorm_1.Column)('text'),
     __metadata("design:type", String)

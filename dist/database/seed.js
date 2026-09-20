@@ -46,6 +46,9 @@ async function seed() {
         username: process.env.DB_USER,
         password: process.env.DB_PASSWORD,
         database: process.env.DB_NAME,
+        ssl: process.env.DB_SSL === 'true'
+            ? { rejectUnauthorized: false }
+            : false,
         entities: [user_entity_1.User],
         synchronize: false,
     });
