@@ -109,7 +109,7 @@ describe('ReservasService', () => {
       reservaRepository.manager.transaction.mockImplementation((cb: any) => cb(manager));
 
       await expect(
-        service.create({ paqueteId: 10, cantidadPersonas: 2 } as any),
+        service.create({ paqueteId: 10, cantidadPersonas: 2 } as any, 1),
       ).rejects.toThrow(NotFoundException);
     });
 
@@ -119,7 +119,7 @@ describe('ReservasService', () => {
 
       // cupos=20, ocupados=19 -> solo queda 1 disponible, se piden 2
       await expect(
-        service.create({ paqueteId: 10, cantidadPersonas: 2 } as any),
+        service.create({ paqueteId: 10, cantidadPersonas: 2 } as any, 1),
       ).rejects.toThrow(ConflictException);
     });
 
@@ -138,7 +138,7 @@ describe('ReservasService', () => {
         emailCliente: 'juan@test.com',
       };
 
-      const reserva = await service.create(dto as any);
+      const reserva = await service.create(dto as any, 1);
 
       // 100000 * 2 * 0.9 = 180000
       expect(reserva.montoTotal).toBe(180000);

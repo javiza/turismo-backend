@@ -64,7 +64,7 @@ let ReservasService = class ReservasService {
                 montoTotal: Number(montoTotal.toFixed(2)),
                 estado: reserva_entity_1.EstadoReserva.PENDIENTE,
                 paquete: { id: dto.paqueteId },
-                cliente: clienteId ? { id: clienteId } : undefined,
+                cliente: { id: clienteId },
             });
             const guardada = await manager.getRepository(reserva_entity_1.Reserva).save(reserva);
             this.eventEmitter.emit(reserva_creada_event_1.RESERVA_CREADA_EVENT, new reserva_creada_event_1.ReservaCreadaEvent(guardada.id, dto.emailCliente, dto.nombreCliente, paquete.nombre, dto.cantidadPersonas, guardada.montoTotal, paquete.fechaInicio, paquete.fechaFin));

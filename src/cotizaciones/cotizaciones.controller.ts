@@ -26,9 +26,10 @@ import type { JwtClientePayload } from '../clientes-auth/interfaces/jwt-cliente-
 export class CotizacionesController {
   constructor(private readonly cotizacionesService: CotizacionesService) {}
 
-  // --- Público: cualquier visitante puede pedir una cotización. Si tiene
-  // sesión de cliente iniciada, queda vinculada a su cuenta (ver nota en
-  // ReservasController sobre OptionalJwtClienteAuthGuard). ---
+  // --- Público: cualquier visitante puede pedir una cotización (a
+  // diferencia de /reservas, acá SÍ se mantiene el checkout como
+  // invitado: es solo una pregunta, no una reserva en firme). Si tiene
+  // sesión de cliente iniciada, queda vinculada a su cuenta igual. ---
   @Post()
   @UseGuards(OptionalJwtClienteAuthGuard)
   create(

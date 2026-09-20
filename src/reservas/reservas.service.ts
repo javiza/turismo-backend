@@ -12,6 +12,7 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Reserva, EstadoReserva } from './entities/reserva.entity';
 import { Paquete } from '../paquetes/entities/paquete.entity';
 import { Oferta } from '../ofertas/entities/oferta.entity';
+import { Cliente } from '../clientes/entities/cliente.entity';
 import { CreateReservaDto } from './dto/create-reserva.dto';
 import { UpdateReservaDto } from './dto/update-reserva.dto';
 import { AdminUpdateReservaDto } from './dto/admin-update-reserva.dto';
@@ -39,7 +40,7 @@ export class ReservasService {
    * cupos restantes en el schema). La disponibilidad se calcula restando
    * la suma de cantidad_personas de reservas no canceladas.
    */
-  async create(dto: CreateReservaDto, clienteId?: number): Promise<Reserva> {
+  async create(dto: CreateReservaDto, clienteId: number): Promise<Reserva> {
     return this.reservaRepository.manager.transaction(async (manager) => {
       const paquete = await manager
         .getRepository(Paquete)
@@ -88,7 +89,7 @@ export class ReservasService {
         montoTotal: Number(montoTotal.toFixed(2)),
         estado: EstadoReserva.PENDIENTE,
         paquete: { id: dto.paqueteId } as Paquete,
-        cliente: clienteId ? { id: clienteId } : undefined,
+        cliente: { id: clienteId } as Cliente,
       });
 
       const guardada = await manager.getRepository(Reserva).save(reserva);

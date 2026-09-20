@@ -6,7 +6,7 @@ import type { JwtClientePayload } from '../clientes-auth/interfaces/jwt-cliente-
 export declare class ReservasController {
     private readonly reservasService;
     constructor(reservasService: ReservasService);
-    create(dto: CreateReservaDto, cliente?: JwtClientePayload): Promise<import("./entities/reserva.entity").Reserva>;
+    create(dto: CreateReservaDto, cliente: JwtClientePayload): Promise<import("./entities/reserva.entity").Reserva>;
     findAll(): Promise<import("./entities/reserva.entity").Reserva[]>;
     findOne(id: string): Promise<import("./entities/reserva.entity").Reserva>;
     updateEstado(id: string, dto: UpdateReservaDto): Promise<import("./entities/reserva.entity").Reserva>;

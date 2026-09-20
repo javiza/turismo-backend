@@ -23,7 +23,7 @@ const jwt_auth_guard_1 = require("../auth/guards/jwt-auth.guard");
 const roles_guard_1 = require("../common/guards/roles.guard");
 const roles_decorator_1 = require("../common/decorators/roles.decorator");
 const roles_enum_1 = require("../common/constants/roles.enum");
-const optional_jwt_cliente_auth_guard_1 = require("../clientes-auth/guards/optional-jwt-cliente-auth.guard");
+const jwt_cliente_auth_guard_1 = require("../clientes-auth/guards/jwt-cliente-auth.guard");
 const current_cliente_decorator_1 = require("../common/decorators/current-cliente.decorator");
 let ReservasController = class ReservasController {
     reservasService;
@@ -31,7 +31,7 @@ let ReservasController = class ReservasController {
         this.reservasService = reservasService;
     }
     create(dto, cliente) {
-        return this.reservasService.create(dto, cliente?.sub);
+        return this.reservasService.create(dto, cliente.sub);
     }
     findAll() {
         return this.reservasService.findAll();
@@ -52,7 +52,8 @@ let ReservasController = class ReservasController {
 exports.ReservasController = ReservasController;
 __decorate([
     (0, common_1.Post)(),
-    (0, common_1.UseGuards)(optional_jwt_cliente_auth_guard_1.OptionalJwtClienteAuthGuard),
+    (0, swagger_1.ApiBearerAuth)('JWT-cliente'),
+    (0, common_1.UseGuards)(jwt_cliente_auth_guard_1.JwtClienteAuthGuard),
     __param(0, (0, common_1.Body)()),
     __param(1, (0, current_cliente_decorator_1.CurrentCliente)()),
     __metadata("design:type", Function),

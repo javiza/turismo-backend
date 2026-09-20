@@ -19,7 +19,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
 import { Role } from '../common/constants/roles.enum';
-import { OptionalJwtClienteAuthGuard } from '../clientes-auth/guards/optional-jwt-cliente-auth.guard';
+import { JwtClienteAuthGuard } from '../clientes-auth/guards/jwt-cliente-auth.guard';
 import { CurrentCliente } from '../common/decorators/current-cliente.decorator';
 import type { JwtClientePayload } from '../clientes-auth/interfaces/jwt-cliente-payload.interface';
 
@@ -27,18 +27,18 @@ import type { JwtClientePayload } from '../clientes-auth/interfaces/jwt-cliente-
 export class ReservasController {
   constructor(private readonly reservasService: ReservasService) {}
 
-  // Checkout como invitado (sin login) sigue funcionando igual que antes.
-  // OptionalJwtClienteAuthGuard solo intenta leer un token de cliente si
-  // viene uno: si el visitante tiene sesión iniciada, la reserva queda
-  // vinculada a su cuenta automáticamente sin que tenga que hacer nada
-  // extra; si no hay token, simplemente sigue como invitado.
+  // El checkout como invitado quedó deshabilitado: solo un cliente con
+  // sesión iniciada puede reservar (cualquier paquete/servicio). El
+  // guard rechaza con 401 si no viene un token de cliente válido, y la
+  // reserva siempre queda vinculada a esa cuenta (cliente.sub).
   @Post()
-  @UseGuards(OptionalJwtClienteAuthGuard)
+  @ApiBearerAuth('JWT-cliente')
+  @UseGuards(JwtClienteAuthGuard)
   create(
     @Body() dto: CreateReservaDto,
-    @CurrentCliente() cliente?: JwtClientePayload,
+    @CurrentCliente() cliente: JwtClientePayload,
   ) {
-    return this.reservasService.create(dto, cliente?.sub);
+    return this.reservasService.create(dto, cliente.sub);
   }
 
   @Get()

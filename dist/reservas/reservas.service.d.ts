@@ -8,7 +8,7 @@ export declare class ReservasService {
     private readonly reservaRepository;
     private readonly eventEmitter;
     constructor(reservaRepository: Repository<Reserva>, eventEmitter: EventEmitter2);
-    create(dto: CreateReservaDto, clienteId?: number): Promise<Reserva>;
+    create(dto: CreateReservaDto, clienteId: number): Promise<Reserva>;
     private obtenerDescuentoActivo;
     findAll(): Promise<Reserva[]>;
     findByCliente(clienteId: number): Promise<Reserva[]>;

@@ -5,11 +5,12 @@ import { AuthGuard } from '@nestjs/passport';
  * Igual que JwtClienteAuthGuard, pero NUNCA lanza si no hay token o es
  * inválido — simplemente deja `request.user` en `undefined`.
  *
- * Se usa en endpoints públicos (crear reserva, crear cotización) que
- * deben seguir aceptando "checkout como invitado", pero que si el
- * visitante SÍ tiene sesión de cliente iniciada, quieren vincular
- * automáticamente el registro a su cuenta sin que el cliente tenga que
- * hacer nada extra.
+ * Se usa en endpoints públicos que deben seguir aceptando invitados sin
+ * cuenta (hoy: crear cotización), pero que si el visitante SÍ tiene
+ * sesión de cliente iniciada, quieren vincular automáticamente el
+ * registro a su cuenta sin que tenga que hacer nada extra. Nota: crear
+ * reserva ya NO usa este guard — reservar exige cuenta (ver
+ * ReservasController), a diferencia de pedir una cotización.
  */
 @Injectable()
 export class OptionalJwtClienteAuthGuard extends AuthGuard('jwt-cliente') {
