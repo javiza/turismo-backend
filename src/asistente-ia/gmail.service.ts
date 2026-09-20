@@ -1,6 +1,8 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { google, gmail_v1 } from 'googleapis';
+
+import { auth, gmail, gmail_v1 } from '@googleapis/gmail';   // antes: { google, gmail_v1 } from 'googleapis'
+
 
 export interface CorreoEntrante {
   id: string;
@@ -44,11 +46,10 @@ export class GmailService implements OnModuleInit {
       return;
     }
 
-    const oAuth2Client = new google.auth.OAuth2(clientId, clientSecret);
+const oAuth2Client = new auth.OAuth2(clientId, clientSecret);  // antes: new google.auth.OAuth2(...)
     oAuth2Client.setCredentials({ refresh_token: refreshToken });
 
-    this.gmail = google.gmail({ version: 'v1', auth: oAuth2Client });
-    this.logger.log('Gmail API inicializada correctamente.');
+this.gmail = gmail({ version: 'v1', auth: oAuth2Client });     // antes: google.gmail({ ... })    this.logger.log('Gmail API inicializada correctamente.');
   }
 
   /** true si hay credenciales configuradas y el servicio puede operar. */
