@@ -13,7 +13,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.GmailService = void 0;
 const common_1 = require("@nestjs/common");
 const config_1 = require("@nestjs/config");
-const googleapis_1 = require("googleapis");
+const gmail_1 = require("@googleapis/gmail");
 let GmailService = GmailService_1 = class GmailService {
     config;
     logger = new common_1.Logger(GmailService_1.name);
@@ -30,10 +30,9 @@ let GmailService = GmailService_1 = class GmailService {
                 'GOOGLE_REFRESH_TOKEN). El asistente de correo queda desactivado.');
             return;
         }
-        const oAuth2Client = new googleapis_1.google.auth.OAuth2(clientId, clientSecret);
+        const oAuth2Client = new gmail_1.auth.OAuth2(clientId, clientSecret);
         oAuth2Client.setCredentials({ refresh_token: refreshToken });
-        this.gmail = googleapis_1.google.gmail({ version: 'v1', auth: oAuth2Client });
-        this.logger.log('Gmail API inicializada correctamente.');
+        this.gmail = (0, gmail_1.gmail)({ version: 'v1', auth: oAuth2Client });
     }
     estaActivo() {
         return this.gmail !== null;
