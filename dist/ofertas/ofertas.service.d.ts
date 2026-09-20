@@ -1,0 +1,32 @@
+import { Repository } from 'typeorm';
+import { Oferta } from './entities/oferta.entity';
+import { OfertaImagen } from './entities/oferta-imagen.entity';
+import { Paquete } from '../paquetes/entities/paquete.entity';
+import { PaqueteImagen } from '../paquetes/entities/paquete-imagen.entity';
+import { DestinoImagen } from '../destinos/entities/destino-imagen.entity';
+import { CreateOfertaDto } from './dto/create-oferta.dto';
+import { UpdateOfertaDto } from './dto/update-oferta.dto';
+import { CacheService } from '../redis/cache.service';
+export declare class OfertasService {
+    private readonly ofertaRepository;
+    private readonly paqueteRepository;
+    private readonly paqueteImagenRepository;
+    private readonly destinoImagenRepository;
+    private readonly ofertaImagenRepository;
+    private readonly cache;
+    constructor(ofertaRepository: Repository<Oferta>, paqueteRepository: Repository<Paquete>, paqueteImagenRepository: Repository<PaqueteImagen>, destinoImagenRepository: Repository<DestinoImagen>, ofertaImagenRepository: Repository<OfertaImagen>, cache: CacheService);
+    private invalidarCache;
+    private validarFechas;
+    create(dto: CreateOfertaDto): Promise<Oferta>;
+    private heredarImagenes;
+    findAll(): Promise<Oferta[]>;
+    findAllAdmin(): Promise<Oferta[]>;
+    findOne(id: number): Promise<Oferta>;
+    update(id: number, dto: UpdateOfertaDto): Promise<Oferta>;
+    remove(id: number): Promise<void>;
+    private isForeignKeyViolation;
+    limpiarDesactivadasAntiguas(mesesRetencion: number): Promise<number>;
+    agregarImagen(ofertaId: number, url: string): Promise<OfertaImagen>;
+    eliminarImagen(ofertaId: number, imagenId: number): Promise<void>;
+    marcarPrincipal(ofertaId: number, imagenId: number): Promise<OfertaImagen>;
+}
