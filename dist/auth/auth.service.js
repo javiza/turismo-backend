@@ -49,14 +49,17 @@ const jwt_1 = require("@nestjs/jwt");
 const bcrypt = __importStar(require("bcrypt"));
 const users_service_1 = require("../users/users.service");
 const token_hash_1 = require("../common/utils/token-hash");
+const email_service_1 = require("../email/email.service");
 let AuthService = class AuthService {
     usersService;
     jwtService;
     config;
-    constructor(usersService, jwtService, config) {
+    emailService;
+    constructor(usersService, jwtService, config, emailService) {
         this.usersService = usersService;
         this.jwtService = jwtService;
         this.config = config;
+        this.emailService = emailService;
     }
     async login(dto) {
         const user = await this.usersService.findByEmail(dto.email);
@@ -103,6 +106,27 @@ let AuthService = class AuthService {
         await this.usersService.cambiarPassword(userId, passwordActual, passwordNueva);
         return { message: 'Contraseña actualizada correctamente' };
     }
+    async forgotPassword(email) {
+        const resultado = await this.usersService.generarTokenReseteo(email);
+        if (resultado) {
+            const frontendUrl = this.config.get('FRONTEND_URL') ?? 'http://localhost:3001';
+            const resetUrl = `${frontendUrl}/restablecer-password/admin?token=${resultado.token}`;
+            await this.emailService.enviarRecuperacionPassword({
+                email: resultado.user.email,
+                nombre: resultado.user.nombre,
+                resetUrl,
+            });
+        }
+        return {
+            message: 'Si el correo está registrado, te enviamos un enlace para restablecer tu contraseña.',
+        };
+    }
+    async resetPassword(token, passwordNueva) {
+        await this.usersService.resetearPasswordConToken(token, passwordNueva);
+        return {
+            message: 'Contraseña restablecida correctamente. Ya puedes iniciar sesión.',
+        };
+    }
     getTokens(user) {
         const payload = {
             sub: user.id,
@@ -126,6 +150,7 @@ exports.AuthService = AuthService = __decorate([
     (0, common_1.Injectable)(),
     __metadata("design:paramtypes", [users_service_1.UsersService,
         jwt_1.JwtService,
-        config_1.ConfigService])
+        config_1.ConfigService,
+        email_service_1.EmailService])
 ], AuthService);
 //# sourceMappingURL=auth.service.js.map

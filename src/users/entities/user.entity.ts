@@ -68,4 +68,20 @@ updatedAt!: Date;
   nullable: true,
 })
 hashedRefreshToken!: string | null;
+
+// "Olvidé mi contraseña": token de un solo uso (hasheado, ver
+// common/utils/token-hash.ts) y su expiración. Ambos nulos fuera de una
+// solicitud de reseteo en curso. Mismo criterio que Cliente.
+@Exclude()
+@Column({
+  name: 'reset_password_token',
+  type: 'varchar',
+  length: 255,
+  nullable: true,
+})
+resetPasswordToken!: string | null;
+
+@Exclude()
+@Column({ name: 'reset_password_expires', type: 'timestamp', nullable: true })
+resetPasswordExpires!: Date | null;
 }

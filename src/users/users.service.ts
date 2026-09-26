@@ -3,6 +3,7 @@ import {
   NotFoundException,
   ConflictException,
   UnauthorizedException,
+  BadRequestException,
 } from '@nestjs/common';
 
 import { InjectRepository } from '@nestjs/typeorm';
@@ -10,8 +11,9 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
 import * as bcrypt from 'bcrypt';
+import { randomBytes } from 'crypto';
 import { getBcryptRounds } from '../common/utils/bcrypt-rounds';
-import { hashToken } from '../common/utils/token-hash';
+import { hashToken, tokenMatches } from '../common/utils/token-hash';
 
 import { User } from './entities/user.entity';
 
@@ -150,6 +152,62 @@ async cambiarPassword(
   }
 
   user.password = await bcrypt.hash(passwordNueva, getBcryptRounds());
+  await this.userRepository.save(user);
+}
+
+/**
+ * Genera un token de reseteo (válido 1 hora) y lo guarda hasheado.
+ * Devuelve el token EN CRUDO (solo para que el caller lo mande por
+ * correo) o null si no existe una cuenta activa con ese email — el
+ * caller debe responder igual en ambos casos (ver
+ * AuthService.forgotPassword) para no filtrar qué emails están
+ * registrados. Mismo criterio que ClientesService.generarTokenReseteo.
+ */
+async generarTokenReseteo(
+  email: string,
+): Promise<{ user: User; token: string } | null> {
+  const user = await this.findByEmail(email);
+  if (!user || !user.activo) return null;
+
+  const token = randomBytes(32).toString('hex');
+  user.resetPasswordToken = hashToken(token);
+  user.resetPasswordExpires = new Date(Date.now() + 60 * 60 * 1000); // 1 hora
+  await this.userRepository.save(user);
+
+  return { user, token };
+}
+
+/** Restablece la contraseña usando el token enviado por correo (ver generarTokenReseteo). */
+async resetearPasswordConToken(
+  token: string,
+  passwordNueva: string,
+): Promise<void> {
+  // No hay forma de buscar directo por el token crudo (se guarda
+  // hasheado), así que se trae a los candidatos con un token vigente
+  // y se compara en tiempo constante con tokenMatches — mismo patrón
+  // que el refresh token y que ClientesService.resetearPasswordConToken.
+  const candidatos = await this.userRepository
+    .createQueryBuilder('usuario')
+    .where('usuario.resetPasswordToken IS NOT NULL')
+    .andWhere('usuario.resetPasswordExpires > :ahora', { ahora: new Date() })
+    .getMany();
+
+  const user = candidatos.find((u) =>
+    tokenMatches(token, u.resetPasswordToken as string),
+  );
+
+  if (!user) {
+    throw new BadRequestException(
+      'El enlace de recuperación no es válido o venció',
+    );
+  }
+
+  user.password = await bcrypt.hash(passwordNueva, getBcryptRounds());
+  user.resetPasswordToken = null;
+  user.resetPasswordExpires = null;
+  // Invalida también cualquier sesión activa, como al cambiar la
+  // contraseña desde el perfil.
+  user.hashedRefreshToken = null;
   await this.userRepository.save(user);
 }
 

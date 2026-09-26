@@ -40,6 +40,7 @@ export class ContenidoService {
       colorFooter: null,
       colorTarjetas: null,
       faviconUrl: null,
+      tituloPestana: null,
       fuenteTexto: 'inter',
       fuenteTextoUrl: null,
       fuenteTitulos: 'fraunces',

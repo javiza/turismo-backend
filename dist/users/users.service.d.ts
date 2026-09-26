@@ -13,4 +13,9 @@ export declare class UsersService {
     updateRefreshToken(userId: number, refreshToken: string): Promise<void>;
     clearRefreshToken(userId: number): Promise<void>;
     cambiarPassword(userId: number, passwordActual: string, passwordNueva: string): Promise<void>;
+    generarTokenReseteo(email: string): Promise<{
+        user: User;
+        token: string;
+    } | null>;
+    resetearPasswordConToken(token: string, passwordNueva: string): Promise<void>;
 }

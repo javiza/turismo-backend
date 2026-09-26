@@ -50,6 +50,7 @@ const common_1 = require("@nestjs/common");
 const typeorm_1 = require("@nestjs/typeorm");
 const typeorm_2 = require("typeorm");
 const bcrypt = __importStar(require("bcrypt"));
+const crypto_1 = require("crypto");
 const bcrypt_rounds_1 = require("../common/utils/bcrypt-rounds");
 const token_hash_1 = require("../common/utils/token-hash");
 const user_entity_1 = require("./entities/user.entity");
@@ -128,6 +129,32 @@ let UsersService = class UsersService {
             throw new common_1.UnauthorizedException('La contraseña actual no es correcta');
         }
         user.password = await bcrypt.hash(passwordNueva, (0, bcrypt_rounds_1.getBcryptRounds)());
+        await this.userRepository.save(user);
+    }
+    async generarTokenReseteo(email) {
+        const user = await this.findByEmail(email);
+        if (!user || !user.activo)
+            return null;
+        const token = (0, crypto_1.randomBytes)(32).toString('hex');
+        user.resetPasswordToken = (0, token_hash_1.hashToken)(token);
+        user.resetPasswordExpires = new Date(Date.now() + 60 * 60 * 1000);
+        await this.userRepository.save(user);
+        return { user, token };
+    }
+    async resetearPasswordConToken(token, passwordNueva) {
+        const candidatos = await this.userRepository
+            .createQueryBuilder('usuario')
+            .where('usuario.resetPasswordToken IS NOT NULL')
+            .andWhere('usuario.resetPasswordExpires > :ahora', { ahora: new Date() })
+            .getMany();
+        const user = candidatos.find((u) => (0, token_hash_1.tokenMatches)(token, u.resetPasswordToken));
+        if (!user) {
+            throw new common_1.BadRequestException('El enlace de recuperación no es válido o venció');
+        }
+        user.password = await bcrypt.hash(passwordNueva, (0, bcrypt_rounds_1.getBcryptRounds)());
+        user.resetPasswordToken = null;
+        user.resetPasswordExpires = null;
+        user.hashedRefreshToken = null;
         await this.userRepository.save(user);
     }
 };

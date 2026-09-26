@@ -66,6 +66,7 @@ class UpdateContenidoHomeDto {
     colorFooter;
     colorTarjetas;
     faviconUrl;
+    tituloPestana;
     fuenteTexto;
     fuenteTextoUrl;
     fuenteTitulos;
@@ -158,6 +159,12 @@ __decorate([
     (0, class_validator_1.MaxLength)(1000),
     __metadata("design:type", String)
 ], UpdateContenidoHomeDto.prototype, "faviconUrl", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.MaxLength)(150),
+    __metadata("design:type", String)
+], UpdateContenidoHomeDto.prototype, "tituloPestana", void 0);
 __decorate([
     (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsString)(),

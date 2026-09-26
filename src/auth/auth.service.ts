@@ -9,6 +9,7 @@ import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { JwtPayload } from './interfaces/jwt-payload.interface';
 import { tokenMatches } from '../common/utils/token-hash';
+import { EmailService } from '../email/email.service';
 
 @Injectable()
 export class AuthService {
@@ -16,6 +17,7 @@ export class AuthService {
     private readonly usersService: UsersService,
     private readonly jwtService: JwtService,
     private readonly config: ConfigService,
+    private readonly emailService: EmailService,
   ) {}
 
   async login(dto: LoginDto) {
@@ -92,6 +94,42 @@ export class AuthService {
   async cambiarPassword(userId: number, passwordActual: string, passwordNueva: string) {
     await this.usersService.cambiarPassword(userId, passwordActual, passwordNueva);
     return { message: 'Contraseña actualizada correctamente' };
+  }
+
+  /**
+   * Siempre responde igual (mensaje genérico) exista o no una cuenta con
+   * ese email, para no dejarle a un atacante confirmar qué correos están
+   * registrados. El correo con el enlace solo se envía si la cuenta
+   * existe y está activa. Mismo criterio que
+   * ClientesAuthService.forgotPassword.
+   */
+  async forgotPassword(email: string) {
+    const resultado = await this.usersService.generarTokenReseteo(email);
+
+    if (resultado) {
+      const frontendUrl =
+        this.config.get<string>('FRONTEND_URL') ?? 'http://localhost:3001';
+      const resetUrl = `${frontendUrl}/restablecer-password/admin?token=${resultado.token}`;
+
+      await this.emailService.enviarRecuperacionPassword({
+        email: resultado.user.email,
+        nombre: resultado.user.nombre,
+        resetUrl,
+      });
+    }
+
+    return {
+      message:
+        'Si el correo está registrado, te enviamos un enlace para restablecer tu contraseña.',
+    };
+  }
+
+  async resetPassword(token: string, passwordNueva: string) {
+    await this.usersService.resetearPasswordConToken(token, passwordNueva);
+    return {
+      message:
+        'Contraseña restablecida correctamente. Ya puedes iniciar sesión.',
+    };
   }
 
   private getTokens(user: User) {

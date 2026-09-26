@@ -11,6 +11,8 @@ import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { CambiarPasswordDto } from '../common/dto/cambiar-password.dto';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import type { JwtPayload } from './interfaces/jwt-payload.interface';
@@ -69,5 +71,29 @@ export class AuthController {
   @ApiResponse({ status: 401, description: 'La contraseña actual no es correcta' })
   cambiarPassword(@Body() dto: CambiarPasswordDto, @CurrentUser() user: JwtPayload) {
     return this.authService.cambiarPassword(user.sub, dto.passwordActual, dto.passwordNueva);
+  }
+
+  // Mismo criterio que en login: límite propio y más estricto que el
+  // general de la API, para frenar fuerza bruta y spam de correos.
+  @Post('forgot-password')
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  @ApiOperation({
+    summary: 'Solicita un enlace de recuperación de contraseña por email (admin)',
+  })
+  forgotPassword(@Body() dto: ForgotPasswordDto) {
+    return this.authService.forgotPassword(dto.email);
+  }
+
+  @Post('reset-password')
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  @ApiOperation({
+    summary: 'Restablece la contraseña del administrador usando el token recibido por email',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'El enlace de recuperación no es válido o venció',
+  })
+  resetPassword(@Body() dto: ResetPasswordDto) {
+    return this.authService.resetPassword(dto.token, dto.passwordNueva);
   }
 }

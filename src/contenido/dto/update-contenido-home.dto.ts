@@ -135,6 +135,13 @@ export class UpdateContenidoHomeDto {
   @MaxLength(1000)
   faviconUrl?: string;
 
+  // Título de la pestaña del navegador (junto al favicon). "" = volver a
+  // usar `${nombreAgencia} | Agencia de Turismo` por defecto.
+  @IsOptional()
+  @IsString()
+  @MaxLength(150)
+  tituloPestana?: string;
+
   // Tipografía general: preseleccionada (key) y/o propia (URL de
   // POST /uploads/fuentes). "" en *Url = quitar la propia.
   @IsOptional()

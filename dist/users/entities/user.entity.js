@@ -28,6 +28,8 @@ let User = class User {
     createdAt;
     updatedAt;
     hashedRefreshToken;
+    resetPasswordToken;
+    resetPasswordExpires;
 };
 exports.User = User;
 __decorate([
@@ -93,6 +95,21 @@ __decorate([
     }),
     __metadata("design:type", Object)
 ], User.prototype, "hashedRefreshToken", void 0);
+__decorate([
+    (0, class_transformer_1.Exclude)(),
+    (0, typeorm_1.Column)({
+        name: 'reset_password_token',
+        type: 'varchar',
+        length: 255,
+        nullable: true,
+    }),
+    __metadata("design:type", Object)
+], User.prototype, "resetPasswordToken", void 0);
+__decorate([
+    (0, class_transformer_1.Exclude)(),
+    (0, typeorm_1.Column)({ name: 'reset_password_expires', type: 'timestamp', nullable: true }),
+    __metadata("design:type", Object)
+], User.prototype, "resetPasswordExpires", void 0);
 exports.User = User = __decorate([
     (0, typeorm_1.Entity)('usuarios')
 ], User);

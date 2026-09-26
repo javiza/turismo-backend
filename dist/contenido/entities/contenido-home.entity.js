@@ -23,6 +23,7 @@ let ContenidoHome = class ContenidoHome {
     colorFooter;
     colorTarjetas;
     faviconUrl;
+    tituloPestana;
     fuenteTexto;
     fuenteTextoUrl;
     fuenteTitulos;
@@ -88,6 +89,10 @@ __decorate([
     (0, typeorm_1.Column)('text', { name: 'favicon_url', nullable: true }),
     __metadata("design:type", Object)
 ], ContenidoHome.prototype, "faviconUrl", void 0);
+__decorate([
+    (0, typeorm_1.Column)('text', { name: 'titulo_pestana', nullable: true }),
+    __metadata("design:type", Object)
+], ContenidoHome.prototype, "tituloPestana", void 0);
 __decorate([
     (0, typeorm_1.Column)('text', { name: 'fuente_texto', default: 'inter' }),
     __metadata("design:type", String)

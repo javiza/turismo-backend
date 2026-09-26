@@ -20,6 +20,8 @@ const auth_service_1 = require("./auth.service");
 const login_dto_1 = require("./dto/login.dto");
 const refresh_token_dto_1 = require("./dto/refresh-token.dto");
 const cambiar_password_dto_1 = require("../common/dto/cambiar-password.dto");
+const forgot_password_dto_1 = require("./dto/forgot-password.dto");
+const reset_password_dto_1 = require("./dto/reset-password.dto");
 const jwt_auth_guard_1 = require("./guards/jwt-auth.guard");
 const current_user_decorator_1 = require("../common/decorators/current-user.decorator");
 let AuthController = class AuthController {
@@ -42,6 +44,12 @@ let AuthController = class AuthController {
     }
     cambiarPassword(dto, user) {
         return this.authService.cambiarPassword(user.sub, dto.passwordActual, dto.passwordNueva);
+    }
+    forgotPassword(dto) {
+        return this.authService.forgotPassword(dto.email);
+    }
+    resetPassword(dto) {
+        return this.authService.resetPassword(dto.token, dto.passwordNueva);
     }
 };
 exports.AuthController = AuthController;
@@ -100,6 +108,32 @@ __decorate([
     __metadata("design:paramtypes", [cambiar_password_dto_1.CambiarPasswordDto, Object]),
     __metadata("design:returntype", void 0)
 ], AuthController.prototype, "cambiarPassword", null);
+__decorate([
+    (0, common_1.Post)('forgot-password'),
+    (0, throttler_1.Throttle)({ default: { limit: 5, ttl: 60_000 } }),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Solicita un enlace de recuperación de contraseña por email (admin)',
+    }),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [forgot_password_dto_1.ForgotPasswordDto]),
+    __metadata("design:returntype", void 0)
+], AuthController.prototype, "forgotPassword", null);
+__decorate([
+    (0, common_1.Post)('reset-password'),
+    (0, throttler_1.Throttle)({ default: { limit: 5, ttl: 60_000 } }),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Restablece la contraseña del administrador usando el token recibido por email',
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 400,
+        description: 'El enlace de recuperación no es válido o venció',
+    }),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [reset_password_dto_1.ResetPasswordDto]),
+    __metadata("design:returntype", void 0)
+], AuthController.prototype, "resetPassword", null);
 exports.AuthController = AuthController = __decorate([
     (0, swagger_1.ApiTags)('Auth'),
     (0, common_1.Controller)('auth'),

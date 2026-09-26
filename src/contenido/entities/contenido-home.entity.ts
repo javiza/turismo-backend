@@ -76,6 +76,15 @@ export class ContenidoHome {
   @Column('text', { name: 'favicon_url', nullable: true })
   faviconUrl!: string | null;
 
+  // Texto del <title> de la pestaña del navegador (al lado del favicon).
+  // Independiente de nombreAgencia (la frase junto al logo en
+  // Navbar/Footer): antes ambos usaban el mismo texto, ahora se editan
+  // por separado. Nullable/"" = el frontend cae de vuelta a
+  // `${nombreAgencia} | Agencia de Turismo` (ver generateMetadata en
+  // app/layout.tsx).
+  @Column('text', { name: 'titulo_pestana', nullable: true })
+  tituloPestana!: string | null;
+
   // Tipografía general del sitio. *Key* = una de las preseleccionadas
   // (FUENTES_SITIO en el frontend: src/lib/fuentes-sitio.ts). *Url* = una
   // propia subida por el admin (POST /uploads/fuentes); si existe, tiene

@@ -16,6 +16,7 @@ export declare class UpdateContenidoHomeDto {
     colorFooter?: string;
     colorTarjetas?: string;
     faviconUrl?: string;
+    tituloPestana?: string;
     fuenteTexto?: string;
     fuenteTextoUrl?: string;
     fuenteTitulos?: string;

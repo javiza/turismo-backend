@@ -13,4 +13,6 @@ export declare class User {
     createdAt: Date;
     updatedAt: Date;
     hashedRefreshToken: string | null;
+    resetPasswordToken: string | null;
+    resetPasswordExpires: Date | null;
 }
